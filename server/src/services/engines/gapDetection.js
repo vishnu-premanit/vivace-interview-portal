@@ -19,7 +19,8 @@ function alternativeCovered(alt, answerNorm, answerStems) {
     return tokenize(phrase).every((t) => answerNorm.includes(t));
   }
   const hits = altStems.filter((s) => answerStems.has(s) || [...answerStems].some((a) => a.length > 4 && s.length > 4 && (a.startsWith(s) || s.startsWith(a))));
-  return hits.length / altStems.length >= (altStems.length === 1 ? 1 : 0.5);
+  // One- and two-word points need every word; longer phrases need most of them.
+  return hits.length / altStems.length >= (altStems.length <= 2 ? 1 : 0.6);
 }
 
 function detectGaps(answer, keyPoints = []) {
