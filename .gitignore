@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.angular/
+.env
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+test-results/
+playwright-report/
+release/
+*.zip
+.DS_Store
