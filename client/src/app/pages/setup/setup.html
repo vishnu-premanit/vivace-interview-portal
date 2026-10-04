@@ -1,0 +1,171 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">New interview</span>
+    <h1>Set the <em class="serif">tempo</em>.</h1>
+    <p>Five choices, then you’re in the room. Everything has a sensible default if you just want to start.</p>
+  </div>
+</div>
+
+@if (welcome()) {
+  <div class="welcome anim-rise" role="status">
+    <app-icon name="note" />
+    <span>Welcome to Vivace, {{ auth.firstName() }}. A six-question text interview is a good first run — about ten minutes.</span>
+  </div>
+}
+
+<div class="layout">
+  <div class="steps">
+    <section class="card step" style="--i:0">
+      <div class="card-title"><h3>Format</h3><span class="section-no">01</span></div>
+      <div class="choices modes" role="radiogroup" aria-label="Interview format">
+        <button type="button" class="choice" role="radio" [attr.aria-checked]="mode() === 'text'" [class.selected]="mode() === 'text'" (click)="mode.set('text')">
+          <app-icon name="type" /><strong>Text</strong><span>Type your answers. Best for depth and structure.</span>
+        </button>
+        <button type="button" class="choice" role="radio" [attr.aria-checked]="mode() === 'voice'" [class.selected]="mode() === 'voice'" (click)="mode.set('voice')">
+          <app-icon name="mic" /><strong>Voice</strong><span>Hear the question, answer out loud. Needs a microphone.</span>
+        </button>
+        <button type="button" class="choice" role="radio" [attr.aria-checked]="mode() === 'video'" [class.selected]="mode() === 'video'" (click)="mode.set('video')">
+          <app-icon name="video" /><strong>Video</strong><span>Camera + mic, recorded, with presentation feedback.</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="card step" style="--i:1">
+      <div class="card-title"><h3>Stream & role</h3><span class="section-no">02</span></div>
+      <div class="choices streams" role="radiogroup" aria-label="Stream">
+        @for (s of meta()?.streams ?? []; track s.id) {
+          <button type="button" class="choice" role="radio" [attr.aria-checked]="stream() === s.id" [class.selected]="stream() === s.id" (click)="pickStream(s.id)">
+            <strong>{{ s.name }}</strong><span>{{ s.group }}</span>
+          </button>
+        }
+      </div>
+      <div class="field role">
+        <label for="role">Target role</label>
+        <input id="role" class="input" list="roles" [ngModel]="role()" (ngModelChange)="role.set($event)" maxlength="100" placeholder="e.g. Junior Developer" />
+        <datalist id="roles">
+          @for (r of currentStream()?.roles ?? []; track r) {
+            <option [value]="r"></option>
+          }
+        </datalist>
+      </div>
+    </section>
+
+    <section class="card step" style="--i:2">
+      <div class="card-title"><h3>Interviewer</h3><span class="section-no">03</span></div>
+      <div class="choices personas" role="radiogroup" aria-label="Interviewer persona" [class.locked]="stress()">
+        @for (p of meta()?.personas ?? []; track p.id) {
+          @if (p.id !== 'skeptic') {
+            <button type="button" class="choice persona" role="radio" [attr.aria-checked]="persona() === p.id" [class.selected]="!stress() && persona() === p.id" (click)="persona.set(p.id)" [disabled]="stress()" [style.--h]="p.hue">
+              <span class="face"><i></i></span>
+              <strong>{{ p.name }}</strong>
+              <span class="ptitle">{{ p.title }}</span>
+              <span>{{ p.style }}</span>
+            </button>
+          }
+        }
+      </div>
+      <label class="switch stress">
+        <input type="checkbox" [ngModel]="stress()" (ngModelChange)="stress.set($event)" />
+        <span class="track"></span>
+        <span><strong><app-icon name="flame" /> Stress mode</strong><br /><span class="small muted">Mr. Rao takes over: tighter time limits, interruptions and push-back.</span></span>
+      </label>
+    </section>
+
+    <section class="card step" style="--i:3">
+      <div class="card-title"><h3>Language</h3><span class="section-no">04</span></div>
+      <div class="field">
+        <label for="lang">Interview language</label>
+        <select id="lang" class="select" [ngModel]="language()" (ngModelChange)="language.set($event)">
+          @for (l of meta()?.languages ?? []; track l.code) {
+            <option [value]="l.code">{{ l.name }} — {{ l.native }}</option>
+          }
+        </select>
+        @if (currentLanguage(); as l) {
+          @if (l.code !== 'en') {
+            <span class="hint">
+              {{ l.offline ? 'HR questions and the interviewer’s voice are fully translated. Technical questions use English unless Gemini is connected.' : 'Needs Gemini for translated questions; otherwise questions stay in English while you answer in ' + l.name + '.' }}
+            </span>
+          }
+        }
+      </div>
+    </section>
+
+    <section class="card step" style="--i:4">
+      <div class="card-title"><h3>Shape of the interview</h3><span class="section-no">05</span></div>
+      <div class="field">
+        <label for="diff">Starting difficulty: <strong>{{ levels[difficulty() - 1] }}</strong></label>
+        <input id="diff" type="range" min="1" max="5" step="1" class="range" [ngModel]="difficulty()" (ngModelChange)="difficulty.set(+$event)" />
+        <span class="hint">The Dynamic Difficulty Engine moves it up or down from here based on your answers.</span>
+      </div>
+      <div class="field">
+        <label for="count">Questions: <strong>{{ questionCount() }}</strong> <span class="muted">(about {{ estMinutes() }} min, plus follow-ups)</span></label>
+        <input id="count" type="range" min="3" max="12" step="1" class="range" [ngModel]="questionCount()" (ngModelChange)="questionCount.set(+$event)" />
+      </div>
+      <div class="toggles">
+        <label class="switch">
+          <input type="checkbox" [ngModel]="focusWeaknesses()" (ngModelChange)="focusWeaknesses.set($event)" />
+          <span class="track"></span>
+          <span><strong>Focus on my weak areas</strong><br /><span class="small muted">Weakness-to-question engine picks questions from your lowest competencies.</span></span>
+        </label>
+        <label class="switch" [class.disabled]="!auth.user()?.hasResume">
+          <input type="checkbox" [ngModel]="useResume()" (ngModelChange)="useResume.set($event)" [disabled]="!auth.user()?.hasResume" />
+          <span class="track"></span>
+          <span>
+            <strong>Ask about my resume</strong><br />
+            @if (auth.user()?.hasResume) {
+              <span class="small muted">Resume Truth Checker probes the claims on your resume.</span>
+            } @else {
+              <span class="small muted"><a routerLink="/app/resume">Upload a resume</a> to turn this on.</span>
+            }
+          </span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" [ngModel]="jdOpen()" (ngModelChange)="jdOpen.set($event)" />
+          <span class="track"></span>
+          <span><strong>Interview for a specific job</strong><br /><span class="small muted">Paste a job description for a JD Match interview.</span></span>
+        </label>
+      </div>
+      @if (jdOpen()) {
+        <div class="field jd anim-rise">
+          <label for="jd">Job description</label>
+          <textarea id="jd" class="textarea" [ngModel]="jdText()" (ngModelChange)="jdText.set($event)" maxlength="20000" placeholder="Paste the full job description — responsibilities and requirements."></textarea>
+          @if (jdText().length > 0 && jdText().length < 40) {
+            <span class="error">Paste a little more — at least a few lines.</span>
+          }
+        </div>
+      }
+    </section>
+  </div>
+
+  <aside class="summary">
+    <div class="card sticky">
+      <span class="eyebrow">Your interview</span>
+      @if (currentPersona(); as p) {
+        <div class="who" [style.--h]="p.hue">
+          <span class="face big"><i></i></span>
+          <div><strong>{{ p.name }}</strong><br /><span class="small muted">{{ p.title }}</span></div>
+        </div>
+      }
+      <dl>
+        <div><dt>Format</dt><dd class="cap">{{ mode() }}</dd></div>
+        <div><dt>Stream</dt><dd>{{ currentStream()?.name ?? '…' }}</dd></div>
+        <div><dt>Role</dt><dd>{{ role() || '—' }}</dd></div>
+        <div><dt>Language</dt><dd>{{ currentLanguage()?.name ?? 'English' }}</dd></div>
+        <div><dt>Level</dt><dd>{{ levels[difficulty() - 1] }}</dd></div>
+        <div><dt>Questions</dt><dd>{{ questionCount() }}</dd></div>
+      </dl>
+      <div class="chips">
+        @if (stress()) { <span class="chip chip-accent">Stress mode</span> }
+        @if (focusWeaknesses()) { <span class="chip chip-teal">Weak areas</span> }
+        @if (useResume()) { <span class="chip chip-teal">Resume claims</span> }
+        @if (jdOpen() && jdText().length >= 40) { <span class="chip chip-teal">JD match</span> }
+      </div>
+      <button type="button" class="btn btn-accent btn-lg btn-block start" (click)="start()" [disabled]="busy() || (jdOpen() && jdText().length > 0 && jdText().length < 40)">
+        @if (busy()) { <span class="spinner"></span> Preparing… } @else { Enter the room <app-icon name="arrow" /> }
+      </button>
+      @if (mode() !== 'text') {
+        <p class="tiny muted">You’ll be asked for {{ mode() === 'video' ? 'camera and microphone' : 'microphone' }} access. Nothing is recorded until you begin.</p>
+      }
+    </div>
+  </aside>
+</div>

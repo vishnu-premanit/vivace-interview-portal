@@ -1,0 +1,29 @@
+.top { align-items: start; }
+.drop { position: relative; display: grid; justify-items: center; gap: 6px; padding: 30px 18px; border: 1.5px dashed var(--line-strong); border-radius: 16px; background: var(--surface-2); cursor: pointer; text-align: center;
+  transition: border-color var(--dur-2), background-color var(--dur-2), transform var(--dur-2) var(--ease-out); }
+.drop:hover, .drop.drag { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.01); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop app-icon { font-size: 1.8rem; color: var(--accent); }
+.drop.busy { pointer-events: none; }
+.spinner.big { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.file { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; margin: 16px 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.file > app-icon { font-size: 1.4rem; color: var(--teal); }
+h4 { margin: 16px 0 8px; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.cred { display: flex; gap: 18px; align-items: center; }
+@media (max-width: 520px) { .cred { flex-direction: column; align-items: flex-start; } }
+.block { margin-top: 22px; }
+.filters { margin-bottom: 14px; }
+.filter { cursor: pointer; text-transform: capitalize; }
+.filter.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.claims { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.claim { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; display: grid; gap: 6px; justify-items: start; animation: rise .4s var(--ease-out) both; animation-delay: calc(min(var(--i), 10) * 40ms); }
+.c-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; width: 100%; }
+.c-head strong { flex: 1; min-width: 200px; }
+.type { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
+.q { display: flex; gap: 8px; margin: 0; color: var(--ink-2); }
+.q app-icon { color: var(--muted); margin-top: 3px; }
+.practice { width: 100%; display: grid; gap: 8px; justify-items: start; }
+.practice .textarea { min-height: 110px; }
+.tall { min-height: 220px; margin-bottom: 12px; }
+.verdict { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; }
+.jdq { margin: 0; padding-left: 20px; display: grid; gap: 6px; }

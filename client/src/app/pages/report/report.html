@@ -1,0 +1,313 @@
+@if (loading()) {
+  <div class="card"><div class="skeleton" style="height: 240px"></div></div>
+} @else if (error()) {
+  <div class="card empty"><h3>{{ error() }}</h3><a routerLink="/app/reports" class="btn">All reports</a></div>
+} @else if (interview(); as iv) {
+  <div class="page-head">
+    <div>
+      <a routerLink="/app/reports" class="crumb small no-print"><app-icon name="arrow-left" /> Reports</a>
+      <span class="eyebrow">Interview report · {{ iv.completedAt | date: 'd MMM yyyy, h:mm a' }}</span>
+      <h1>{{ iv.stream.name }}{{ iv.role ? ' — ' + iv.role : '' }}</h1>
+      <div class="chips">
+        <span class="chip"><app-icon [name]="modeIcon(iv.mode)" /> <span class="cap">{{ iv.mode }}</span></span>
+        <span class="chip">{{ iv.persona.name }} · {{ iv.persona.title }}</span>
+        <span class="chip"><app-icon name="globe" /> {{ iv.language.name }}</span>
+        @if (iv.stress) { <span class="chip chip-accent"><app-icon name="flame" /> Stress mode</span> }
+        <span class="chip">{{ iv.aiSource === 'gemini' ? 'Evaluated with Gemini + engines' : 'Evaluated with offline engines' }}</span>
+      </div>
+    </div>
+    <div class="row no-print">
+      <button type="button" class="btn btn-ghost btn-sm" (click)="print()"><app-icon name="download" /> Save as PDF</button>
+      <button type="button" class="btn btn-accent btn-sm" (click)="again()">Practise again <app-icon name="arrow" /></button>
+    </div>
+  </div>
+
+  @if (iv.status === 'abandoned' || !report()) {
+    <div class="card empty"><h3>No report</h3><p>This interview ended before any answers were given.</p></div>
+  } @else if (report(); as r) {
+    <!-- 01 Summary -->
+    <section class="grid summary">
+      <article class="card overall" appReveal>
+        <span class="section-no">No. 01 · Summary</span>
+        <div class="big-score" [attr.data-tone]="tone(r.overall)"><span [appCountUp]="r.overall" [decimals]="1"></span><small>/10</small></div>
+        <p class="lead">{{ r.summary.text }}</p>
+        <h4>Do this next</h4>
+        <ol class="next">
+          @for (s of r.summary.nextSteps; track $index) {
+            <li>{{ s }}</li>
+          }
+        </ol>
+        <p class="tiny muted">{{ r.answered }} answered · {{ r.followUps }} follow-ups · {{ r.skipped }} skipped</p>
+      </article>
+      <article class="card" appReveal="1">
+        <div class="card-title"><h3>Readiness</h3><span class="tiny muted">this session</span></div>
+        <app-gauge [value]="r.readiness.score" [label]="r.readiness.band" />
+        <ul class="mini-breakdown">
+          @for (b of r.readiness.breakdown; track b.key) {
+            @if (b.key !== 'practice') {
+              <li><span>{{ b.label }}</span><b class="mono">{{ b.value }}</b></li>
+            }
+          }
+        </ul>
+      </article>
+      <article class="card" appReveal="2">
+        <div class="card-title"><h3>Outcome</h3><span class="tiny muted">predicted</span></div>
+        @if (r.outcome; as o) {
+          <div class="prob"><span [appCountUp]="o.probability"></span><small>%</small></div>
+          <span class="chip" [class.chip-good]="o.probability >= 70" [class.chip-warn]="o.probability >= 40 && o.probability < 70" [class.chip-bad]="o.probability < 40">{{ o.band }}</span>
+          <div class="drivers">
+            @for (h of o.helping; track h.key) { <div class="up"><app-icon name="arrow" /> {{ h.label }}</div> }
+            @for (h of o.hurting; track h.key) { <div class="down"><app-icon name="arrow" /> {{ h.label }}</div> }
+          </div>
+          <p class="tiny muted">{{ o.disclaimer }}</p>
+        }
+      </article>
+    </section>
+
+    <!-- 02 Dimensions -->
+    <section class="card block" appReveal>
+      <div class="card-title"><h3>How your answers scored</h3><span class="section-no">No. 02</span></div>
+      <div class="dims">
+        @for (d of dims(); track d.key; let i = $index) {
+          <div class="dim" [style.--i]="i">
+            <span>{{ d.label }}</span>
+            <div class="bar" [class.accent]="d.value < 5" [class.teal]="d.value >= 7.5"><span [style.width.%]="d.value * 10"></span></div>
+            <b class="mono">{{ d.value | number: '1.1-1' }}</b>
+          </div>
+        }
+      </div>
+      @if (r.competencies.length) {
+        <h4 class="sub">By competency</h4>
+        <div class="comps">
+          @for (c of r.competencies; track c.id) {
+            <div class="comp"><app-ring [value]="c.mean" /><span class="small">{{ c.label }}</span></div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- 03 Question by question -->
+    <section class="block" appReveal>
+      <div class="card-title"><h3>Question by question</h3><span class="section-no">No. 03</span></div>
+      <div class="turns">
+        @for (t of answered(); track t.index) {
+          <article class="turn card" [class.open]="open() === t.index" [class.follow]="t.kind === 'follow-up'">
+            <button type="button" class="turn-head" (click)="toggle(t)" [attr.aria-expanded]="open() === t.index">
+              <span class="tlabel mono">{{ label(t) }}</span>
+              <span class="tq">{{ t.text }}</span>
+              @if (t.skipped) {
+                <span class="chip">Skipped</span>
+              } @else if (t.evaluation) {
+                <span class="tscore" [attr.data-tone]="tone(t.evaluation.overall)">{{ t.evaluation.overall }}</span>
+              }
+              <app-icon name="chevron" class="chev" />
+            </button>
+            @if (open() === t.index && t.evaluation; as ev) {
+              <div class="turn-body">
+                <div class="chips tags">
+                  <span class="chip">{{ t.type }}</span>
+                  <span class="chip">level {{ t.difficulty }}</span>
+                  @if (t.counterReason) { <span class="chip chip-accent">counter-question: {{ t.counterReason }}</span> }
+                  @if (t.targetReason) { <span class="chip chip-teal">{{ t.targetReason }}</span> }
+                  @if (t.source === 'resume') { <span class="chip chip-teal">resume claim</span> }
+                  @if (t.source === 'jd') { <span class="chip chip-teal">from JD</span> }
+                </div>
+                <div class="cols">
+                  <div>
+                    <h4>Your answer</h4>
+                    <p class="answer"><app-highlight [text]="t.answer" [marks]="ev.fillers?.marks" /></p>
+                    @if (ev.star.applicable && ev.star.sentences.length) {
+                      <h4>STAR breakdown</h4>
+                      <ol class="star-list">
+                        @for (s of ev.star.sentences; track s.index) {
+                          <li [attr.data-tag]="s.tag"><span class="tag mono">{{ starTag(s.tag) }}</span>{{ s.text }}</li>
+                        }
+                      </ol>
+                    }
+                  </div>
+                  <div>
+                    <h4>Key points</h4>
+                    @if (ev.gaps.unavailable) {
+                      <p class="small muted">Keyword gap detection isn’t available for this language offline.</p>
+                    } @else {
+                      <div class="chips">
+                        @for (c of ev.gaps.covered; track c) { <span class="chip chip-good"><app-icon name="check" /> {{ c }}</span> }
+                        @for (m of ev.gaps.missing; track m) { <span class="chip chip-bad"><app-icon name="x" /> {{ m }}</span> }
+                      </div>
+                    }
+                    <h4>Feedback</h4>
+                    <ul class="fb">
+                      @for (s of ev.feedback.strengths; track $index) { <li class="good"><app-icon name="check" /> {{ s }}</li> }
+                      @for (s of ev.feedback.improvements; track $index) { <li class="warn"><app-icon name="arrow" /> {{ s }}</li> }
+                    </ul>
+                    <h4>Timing</h4>
+                    <p class="small">Thinking {{ ev.timing.thinkSec }}s (ideal {{ ev.timing.idealThink[0] }}–{{ ev.timing.idealThink[1] }}s) · answering {{ ev.timing.answerSec }}s{{ ev.timing.wpm ? ' · ' + ev.timing.wpm + ' wpm' : '' }}</p>
+                    @for (n of ev.timing.notes; track $index) { <p class="small muted">{{ n }}</p> }
+                    <h4>A stronger answer would…</h4>
+                    <ul class="outline">
+                      @for (m of ev.modelAnswer; track $index) { <li>{{ m }}</li> }
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="grid grid-2 block">
+      <!-- 04 Fillers -->
+      <article class="card" appReveal>
+        <div class="card-title"><h3>Filler word heatmap</h3><span class="section-no">No. 04</span></div>
+        <p class="small muted">{{ r.fillers.total }} fillers in total, {{ r.fillers.perHundred }} per 100 words.</p>
+        <app-heatmap [rows]="r.fillers.rows" />
+        @if (r.fillers.words.length) {
+          <div class="chips words">
+            @for (w of r.fillers.words; track w.word) { <span class="chip">“{{ w.word }}” <b class="mono">×{{ w.count }}</b></span> }
+          </div>
+        }
+      </article>
+      <!-- 05 Timing -->
+      <article class="card" appReveal="1">
+        <div class="card-title"><h3>Response-time intelligence</h3><span class="section-no">No. 05</span></div>
+        <div class="tbars">
+          @for (row of r.timing.rows; track row.index; let i = $index) {
+            <div class="tbar" [style.--i]="i">
+              <span class="tiny mono">L{{ row.difficulty }}</span>
+              <div class="track">
+                <i class="ideal" [style.left.%]="(row.idealThink[0] / maxThink()) * 100" [style.width.%]="((row.idealThink[1] - row.idealThink[0]) / maxThink()) * 100"></i>
+                <i class="val" [class.off]="row.verdict !== 'ideal'" [style.width.%]="(row.thinkSec / maxThink()) * 100"></i>
+              </div>
+              <span class="tiny mono">{{ row.thinkSec }}s</span>
+            </div>
+          }
+        </div>
+        <p class="tiny muted legend"><i class="lg-ideal"></i> ideal thinking window for the question’s level <i class="lg-val"></i> your thinking time</p>
+        <div class="tstats">
+          <div class="metric"><span class="value">{{ r.timing.avgThink }}s</span><span class="label">avg. thinking</span></div>
+          <div class="metric"><span class="value">{{ r.timing.avgAnswer }}s</span><span class="label">avg. answer</span></div>
+          <div class="metric"><span class="value">{{ r.timing.avgWpm ?? '—' }}</span><span class="label">words / min</span></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid grid-2 block">
+      <!-- 06 Difficulty -->
+      <article class="card" appReveal>
+        <div class="card-title"><h3>Dynamic difficulty path</h3><span class="section-no">No. 06</span></div>
+        <app-line-chart [series]="diffSeries()" [labels]="diffLabels()" [min]="0" [max]="5" ariaLabel="Difficulty level per question" />
+        <ul class="reasons">
+          @for (p of r.difficultyPath; track p.index) {
+            @if (p.reason && p.change !== 0) { <li class="small"><b class="mono">{{ p.change > 0 ? '▲' : '▼' }}</b> {{ p.reason }}</li> }
+          }
+        </ul>
+      </article>
+      <!-- 07 STAR -->
+      <article class="card" appReveal="1">
+        <div class="card-title"><h3>STAR structure</h3><span class="section-no">No. 07</span></div>
+        @if (r.star; as st) {
+          <div class="star-sum">
+            <app-ring [value]="st.average" style="--s: 76px" />
+            <div class="stack">
+              @for (c of st.components; track c.key) {
+                <div class="dim"><span class="cap">{{ c.key }}</span><div class="bar teal"><span [style.width.%]="c.rate"></span></div><b class="mono">{{ c.rate }}%</b></div>
+              }
+              <div class="dim"><span>Result has a number</span><div class="bar accent"><span [style.width.%]="st.quantifiedRate"></span></div><b class="mono">{{ st.quantifiedRate }}%</b></div>
+            </div>
+          </div>
+        } @else {
+          <p class="small muted">No behavioural questions in this session, so STAR wasn’t scored.</p>
+        }
+      </article>
+    </section>
+
+    @if (r.presentation || iv.recording) {
+      <!-- 08 Presentation -->
+      <section class="card block" appReveal>
+        <div class="card-title"><h3>Presentation behaviour</h3><span class="section-no">No. 08</span></div>
+        <div class="pres">
+          @if (iv.recording) {
+            <div class="player">
+              @if (iv.recording.mime.startsWith('video')) {
+                <video [src]="'/api/media/' + iv.recording.id" controls preload="metadata" playsinline></video>
+              } @else {
+                <audio [src]="'/api/media/' + iv.recording.id" controls preload="metadata"></audio>
+              }
+              <span class="tiny muted">Recording · {{ iv.recording.size / 1048576 | number: '1.1-1' }} MB</span>
+            </div>
+          }
+          @if (r.presentation; as p) {
+            <div>
+              <ul class="obs">
+                @for (o of p.observations; track o.area) {
+                  <li [attr.data-status]="o.status"><span class="area">{{ o.area }}</span><span>{{ o.text }}</span></li>
+                }
+              </ul>
+              <div class="note"><app-icon name="shield" /> {{ p.disclaimer }}</div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    @if (r.truth || r.jd || r.stress) {
+      <section class="grid grid-2 block">
+        @if (r.truth; as tr) {
+          <article class="card" appReveal>
+            <div class="card-title"><h3>Resume truth checker</h3><span class="section-no">No. 09</span></div>
+            <p class="small">Credibility <b class="mono">{{ tr.credibility ?? '—' }}/100</b> across {{ tr.tested }} claim(s) tested.</p>
+            <ul class="claims">
+              @for (c of tr.claims; track c.id) {
+                <li><span class="chip" [class.chip-good]="c.assessment.status === 'supported'" [class.chip-warn]="c.assessment.status === 'partially-supported'" [class.chip-bad]="c.assessment.status === 'unverified' || c.assessment.status === 'inconsistent'">{{ statusLabel[c.assessment.status] }}</span>
+                  <span class="small">{{ c.keyword }}</span><span class="tiny muted">{{ c.assessment.note }}</span></li>
+              }
+            </ul>
+          </article>
+        }
+        @if (r.jd; as jd) {
+          <article class="card" appReveal="1">
+            <div class="card-title"><h3>JD match</h3><span class="section-no">No. 10</span></div>
+            <div class="row"><app-ring [value]="jd.score" style="--s: 70px" /><strong>{{ jd.verdict }}</strong></div>
+            <div class="chips gapchips">
+              @for (m of jd.matched; track m) { <span class="chip chip-good">{{ m }}</span> }
+              @for (m of jd.missing; track m) { <span class="chip chip-bad">{{ m }}</span> }
+            </div>
+          </article>
+        }
+        @if (r.stress; as s) {
+          <article class="card" appReveal="2">
+            <div class="card-title"><h3>Stress resilience</h3><span class="section-no">No. 11</span></div>
+            <div class="row"><app-ring [value]="s.score" style="--s: 70px" />
+              <p class="small">Under pressure you averaged <b>{{ s.stressAverage }}</b>/10{{ s.calmAverage !== null ? ' vs ' + s.calmAverage + ' in calm sessions' : '' }}. You handled {{ s.followUpsHandled }} push-back question(s) well.</p>
+            </div>
+          </article>
+        }
+      </section>
+    }
+
+    <section class="grid grid-2 block">
+      <article class="card" appReveal>
+        <div class="card-title"><h3>Skill gap map</h3><span class="section-no">No. 12</span></div>
+        <app-radar [axes]="radarAxes()" />
+      </article>
+      <article class="card" appReveal="1">
+        <div class="card-title"><h3>Patterns in this session</h3><span class="section-no">No. 13</span></div>
+        @if (r.mistakes.length) {
+          <ul class="pattern">
+            @for (m of r.mistakes; track m.code) {
+              <li><div class="spread"><strong>{{ m.label }}</strong><span class="chip chip-accent mono">×{{ m.count }}</span></div><p class="small muted">{{ m.tip }}</p></li>
+            }
+          </ul>
+          <p class="tiny muted">These are saved to your Mistake Memory and will be reminded at the start of your next interview.</p>
+        } @else {
+          <p class="small">No recurring mistakes in this session. Nice.</p>
+        }
+      </article>
+    </section>
+
+    <div class="row foot no-print">
+      <button type="button" class="btn btn-danger btn-sm" (click)="remove()"><app-icon name="trash" /> Delete this interview</button>
+    </div>
+  }
+}

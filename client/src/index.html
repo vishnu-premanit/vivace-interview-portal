@@ -2,12 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Client</title>
+  <title>Vivace — interview practice that talks back</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Practise text, voice and video interviews for BSc IT, BCom, BBA, BCA, MBA and more — with an interviewer that adapts, probes and remembers.">
+  <meta name="theme-color" content="#f4efe6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    /* Paint the right background before the app boots to avoid a white flash. */
+    html{background:#f4efe6}@media (prefers-color-scheme:dark){html{background:#121110}}
+    .boot{position:fixed;inset:0;display:grid;place-items:center;font:italic 500 28px Georgia,serif;color:#9a9284}
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root><div class="boot">Vivace</div></app-root>
 </body>
 </html>

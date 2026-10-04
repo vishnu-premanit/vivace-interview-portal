@@ -1,0 +1,131 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Resume & job description</span>
+    <h1>Every line is a <em class="serif">question</em>.</h1>
+    <p>Upload your resume and the Truth Checker lists the claims an interviewer will poke at. Paste a job description to see how well you match it.</p>
+  </div>
+</div>
+
+<div class="grid grid-2 top">
+  <section class="card" appReveal>
+    <div class="card-title"><h3>Your resume</h3><span class="section-no">01</span></div>
+    @if (loading()) {
+      <div class="skeleton" style="height: 140px"></div>
+    } @else {
+      <label class="drop" [class.drag]="dragging()" [class.busy]="uploading()" (dragover)="$event.preventDefault(); dragging.set(true)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
+        <input type="file" accept=".pdf,.docx,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" (change)="onPick($event)" data-testid="resume-input" />
+        @if (uploading()) {
+          <span class="spinner big"></span><strong>Reading your resume…</strong>
+        } @else {
+          <app-icon name="upload" />
+          <strong>{{ resume() ? 'Replace resume' : 'Drop your resume here' }}</strong>
+          <span class="small muted">or click to choose · PDF, DOCX or TXT · up to 5 MB</span>
+        }
+      </label>
+      @if (resume(); as r) {
+        <div class="file anim-rise">
+          <app-icon name="file" />
+          <div><strong>{{ r.filename }}</strong><br /><span class="tiny muted">{{ r.size / 1024 | number: '1.0-0' }} KB · uploaded {{ r.uploadedAt | date: 'd MMM, h:mm a' }}</span></div>
+          <a class="icon-btn" href="/api/resume/file" aria-label="Download resume"><app-icon name="download" /></a>
+          <button type="button" class="icon-btn" (click)="removeResume()" aria-label="Remove resume"><app-icon name="trash" /></button>
+        </div>
+        <h4>Skills found</h4>
+        <div class="chips">
+          @for (s of r.skills; track s) { <span class="chip">{{ s }}</span> } @empty { <span class="small muted">No known skills detected.</span> }
+        </div>
+      }
+    }
+  </section>
+
+  <section class="card" appReveal="1">
+    <div class="card-title"><h3>Credibility</h3><span class="section-no">02</span></div>
+    @if (resume(); as r) {
+      <div class="cred">
+        <app-ring [value]="r.summary.credibility" style="--s: 96px" />
+        <div>
+          <p>{{ r.summary.tested }} of {{ r.summary.totalClaims }} claims tested · {{ r.summary.supported }} backed up · {{ r.summary.weak }} weak.</p>
+          <p class="small muted">Credibility is how well your interview answers support what your resume says. Practise a claim below, or let an interview probe them.</p>
+          <button type="button" class="btn btn-accent btn-sm" (click)="startResumeInterview()">Interview me on my resume <app-icon name="arrow" /></button>
+        </div>
+      </div>
+    } @else {
+      <p class="muted">Upload a resume to see how believable your claims sound under questioning.</p>
+    }
+  </section>
+</div>
+
+@if (resume(); as r) {
+  <section class="card block" appReveal>
+    <div class="card-title"><h3>Claims an interviewer will probe</h3><span class="section-no">03</span></div>
+    <div class="chips filters">
+      <button type="button" class="chip filter" [class.on]="filter() === 'all'" (click)="filter.set('all')">All ({{ r.claims.length }})</button>
+      @for (t of types(); track t) {
+        <button type="button" class="chip filter" [class.on]="filter() === t" (click)="filter.set(t)">{{ t }}</button>
+      }
+    </div>
+    <ul class="claims">
+      @for (c of claims(); track c.id; let i = $index) {
+        <li class="claim" [style.--i]="i">
+          <div class="c-head">
+            <span class="type mono">{{ c.type }}</span>
+            <strong>{{ c.keyword }}</strong>
+            @if (c.assessment; as a) {
+              <span class="chip" [class]="'chip ' + status[a.status].cls">{{ status[a.status].label }} · {{ a.score }}</span>
+            } @else {
+              <span class="chip">Not tested</span>
+            }
+          </div>
+          <p class="q"><app-icon name="message" /> {{ c.question }}</p>
+          @if (c.assessment?.note) { <p class="tiny muted">{{ c.assessment?.note }}</p> }
+          <button type="button" class="btn btn-quiet btn-sm" (click)="practise(c)">{{ practising() === c.id ? 'Cancel' : 'Practise this' }}</button>
+          @if (practising() === c.id) {
+            <div class="practice anim-rise">
+              <textarea class="textarea" [ngModel]="practiceAnswer()" (ngModelChange)="practiceAnswer.set($event)" placeholder="Answer as you would in the interview — be specific." maxlength="6000"></textarea>
+              <button type="button" class="btn btn-sm" (click)="check(c)" [disabled]="checking() || practiceAnswer().trim().length < 2">Check my answer</button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+<section class="card block jd" appReveal>
+  <div class="card-title"><h3>JD match</h3><span class="section-no">04</span></div>
+  <div class="grid grid-2">
+    <div>
+      <label class="sr-only" for="jd">Job description</label>
+      <textarea id="jd" class="textarea tall" [ngModel]="jdText()" (ngModelChange)="jdText.set($event)" placeholder="Paste a job description: role, responsibilities, must-have and nice-to-have skills…" maxlength="20000" data-testid="jd-input"></textarea>
+      <div class="row">
+        <button type="button" class="btn" (click)="runMatch()" [disabled]="matching() || jdText().trim().length < 40">
+          @if (matching()) { <span class="spinner"></span> } Check my match
+        </button>
+        @if (jdText().trim().length >= 40) {
+          <button type="button" class="btn btn-accent" (click)="startJdInterview()">Start a JD interview <app-icon name="arrow" /></button>
+        }
+      </div>
+    </div>
+    <div>
+      @if (match(); as m) {
+        <div class="match anim-rise" data-testid="jd-result">
+          <div class="row"><app-ring [value]="m.score" style="--s: 88px" /><div><strong class="verdict">{{ m.verdict }}</strong><br /><span class="small muted">{{ m.requirements.role || 'Role from the description' }}{{ m.requirements.minYears ? ' · ' + m.requirements.minYears + '+ yrs' : '' }}</span></div></div>
+          @if (!m.hasResume && m.hasResume !== undefined) { <p class="tiny muted">No resume uploaded, so the score only reflects the description. Upload one for a real match.</p> }
+          <h4>You have</h4>
+          <div class="chips">@for (s of m.matched; track s) { <span class="chip chip-good"><app-icon name="check" /> {{ s }}</span> } @empty { <span class="small muted">None of the listed skills yet.</span> }</div>
+          <h4>Missing must-haves</h4>
+          <div class="chips">@for (s of m.missing; track s) { <span class="chip chip-bad">{{ s }}</span> } @empty { <span class="small muted">None — nice.</span> }</div>
+          @if (m.missingNice.length) {
+            <h4>Missing nice-to-haves</h4>
+            <div class="chips">@for (s of m.missingNice; track s) { <span class="chip chip-warn">{{ s }}</span> }</div>
+          }
+          @if (jdQuestions().length) {
+            <h4>Questions this JD will lead to</h4>
+            <ol class="jdq">@for (q of jdQuestions(); track q.id) { <li class="small">{{ q.text }}</li> }</ol>
+          }
+        </div>
+      } @else {
+        <div class="empty small">Your match score, missing skills and the questions this job is likely to bring up will appear here.</div>
+      }
+    </div>
+  </div>
+</section>

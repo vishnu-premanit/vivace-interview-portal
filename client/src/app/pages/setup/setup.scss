@@ -1,0 +1,32 @@
+.welcome { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--teal-soft); color: var(--teal); margin-bottom: 20px; font-weight: 500; }
+.layout { display: grid; grid-template-columns: 1fr 320px; gap: 22px; align-items: start; }
+@media (max-width: 1060px) { .layout { grid-template-columns: 1fr; } }
+.steps { display: grid; gap: 18px; }
+.step { animation: rise .55s var(--ease-out) both; animation-delay: calc(var(--i) * 70ms); }
+.modes { grid-template-columns: repeat(3, 1fr); }
+.modes app-icon { font-size: 1.4rem; color: var(--accent); margin-bottom: 4px; }
+@media (max-width: 640px) { .modes { grid-template-columns: 1fr; } }
+.streams { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.role { margin: 16px 0 0; max-width: 420px; }
+.personas { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); transition: opacity var(--dur-2); }
+.personas.locked { opacity: .45; }
+.persona .ptitle { color: var(--ink-2); font-weight: 600; }
+.face { width: 34px; height: 34px; border-radius: 50%; background: hsl(var(--h) 55% 50% / .18); display: grid; place-items: center; margin-bottom: 6px; }
+.face i { width: 14px; height: 14px; border-radius: 50%; background: hsl(var(--h) 60% 45%); }
+.face.big { width: 48px; height: 48px; margin: 0; }
+.face.big i { width: 20px; height: 20px; }
+.stress { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.stress app-icon { color: var(--accent); }
+.range { width: 100%; accent-color: var(--accent); height: 28px; }
+.toggles { display: grid; gap: 14px; margin-top: 6px; }
+.switch.disabled { opacity: .6; }
+.jd { margin-top: 14px; }
+.sticky { position: sticky; top: 20px; display: grid; gap: 14px; }
+.who { display: flex; gap: 12px; align-items: center; }
+dl { margin: 0; display: grid; gap: 0; }
+dl div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 600; text-align: right; }
+.cap { text-transform: capitalize; }
+.start { margin-top: 4px; }
+@media (max-width: 1060px) { .sticky { position: static; } }

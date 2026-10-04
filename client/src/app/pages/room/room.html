@@ -1,0 +1,240 @@
+<div class="room" [class.video]="isVideo()" [class.voice]="isVoice()" [class.stress]="interview()?.stress" [style.--h]="persona()?.hue ?? 28">
+  <header class="bar">
+    <a routerLink="/app" class="back" aria-label="Leave to dashboard" (click)="$event.preventDefault(); confirmEnd.set(true)"><app-icon name="arrow-left" /></a>
+    <div class="who">
+      <strong>{{ persona()?.name }}</strong>
+      <span class="small muted">{{ persona()?.title }}</span>
+    </div>
+    <div class="meta">
+      @if (interview(); as iv) {
+        <span class="chip mono" aria-label="Question progress">Q {{ progress().mainAsked }}/{{ progress().questionCount }}</span>
+        <span class="diff" [attr.aria-label]="'Difficulty level ' + iv.difficulty">
+          @for (d of difficultyDots; track d) {
+            <i [class.on]="d <= iv.difficulty"></i>
+          }
+        </span>
+        @if (iv.stress) { <span class="chip chip-accent"><app-icon name="flame" /> Stress</span> }
+        @if (iv.language.code !== 'en') { <span class="chip"><app-icon name="globe" /> {{ iv.language.native }}</span> }
+      }
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm end" (click)="confirmEnd.set(true)" [disabled]="phase() === 'finishing'">End</button>
+  </header>
+
+  @switch (phase()) {
+    @case ('loading') {
+      <div class="center-stage"><div class="spinner-lg"></div></div>
+    }
+    @case ('error') {
+      <div class="center-stage">
+        <div class="card empty">
+          <h3>Something went wrong</h3>
+          <p>{{ errorText() }}</p>
+          <a routerLink="/app" class="btn">Back to dashboard</a>
+        </div>
+      </div>
+    }
+    @case ('preflight') {
+      <div class="preflight anim-rise">
+        <div class="pf-main card">
+          <span class="eyebrow">Before we begin</span>
+          <h2>{{ interview()?.greeting }}</h2>
+          <ul class="facts">
+            <li><app-icon [name]="isVideo() ? 'video' : isVoice() ? 'mic' : 'type'" /> <span class="cap">{{ interview()?.mode }}</span> interview · {{ interview()?.stream?.name }}{{ interview()?.role ? ' · ' + interview()?.role : '' }}</li>
+            <li><app-icon name="layers" /> {{ interview()?.questionCount }} questions, plus follow-ups when an answer needs one</li>
+            @if (limit()) { <li><app-icon name="clock" /> {{ limit() }} seconds per answer</li> }
+            @if (isVoice()) { <li><app-icon name="mic" /> The interviewer speaks each question, then listens. You can edit the transcript before sending.</li> }
+            @if (!isVoice()) { <li><app-icon name="type" /> Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send an answer.</li> }
+          </ul>
+
+          @if (interview()?.reminders?.length) {
+            <div class="reminders">
+              <h4><app-icon name="memory" /> From your mistake memory</h4>
+              @for (r of interview()!.reminders; track r.code) {
+                <div class="rem"><strong>{{ r.label }}</strong> <span class="mono tiny muted">×{{ r.count }}</span><p class="small">{{ r.tip }}</p></div>
+              }
+            </div>
+          }
+          <button type="button" class="btn btn-accent btn-lg begin" (click)="begin()">I’m ready — begin <app-icon name="arrow" /></button>
+        </div>
+
+        @if (isVoice()) {
+          <div class="pf-device card">
+            <h4>Device check</h4>
+            @if (isVideo()) {
+              <div class="preview"><video #previewView playsinline muted autoplay></video>@if (!mediaReady()) {<div class="ph"><app-icon name="video" /></div>}</div>
+            }
+            <app-waveform [level]="level()" [active]="mediaReady()" />
+            @if (mediaError(); as e) {
+              <div class="note bad"><app-icon name="alert" /> {{ e }}</div>
+              <div class="row">
+                <button type="button" class="btn btn-sm" (click)="openMedia()"><app-icon name="refresh" /> Try again</button>
+                <span class="tiny muted">Or begin anyway and type your answers.</span>
+              </div>
+            } @else if (mediaReady()) {
+              <p class="small good"><app-icon name="check" /> {{ isVideo() ? 'Camera and microphone are on.' : 'Microphone is on.' }} Say something — the bars should move.</p>
+            } @else {
+              <p class="small muted">Waiting for permission…</p>
+            }
+            @if (!speech.sttSupported) {
+              <p class="tiny muted">This browser has no built-in speech recognition, so your answers will be transcribed on the server (needs Gemini) or you can type them.</p>
+            }
+          </div>
+        }
+      </div>
+    }
+    @default {
+      <div class="stage">
+        <section class="interviewer" aria-live="polite">
+          <div class="avatar" [class.speaking]="speech.speaking()" [class.listening]="phase() === 'answering' && !speech.speaking()" [class.thinking]="phase() === 'evaluating'">
+            <span class="ring r1"></span><span class="ring r2"></span>
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="44" class="head" />
+              <g class="eyes"><circle cx="45" cy="54" r="4.5" /><circle cx="75" cy="54" r="4.5" /></g>
+              <rect x="46" y="74" width="28" height="5" rx="2.5" class="mouth" />
+            </svg>
+          </div>
+
+          <div class="q-card">
+            @if (counterLabel(); as cl) {
+              <span class="chip chip-accent follow-tag"><app-icon name="refresh" /> Follow-up · {{ cl }}</span>
+            } @else if (turn()?.targetReason) {
+              <span class="chip chip-teal follow-tag"><app-icon name="target" /> {{ turn()?.targetReason }}</span>
+            } @else if (turn()?.source === 'resume') {
+              <span class="chip chip-teal follow-tag"><app-icon name="file" /> From your resume</span>
+            } @else if (turn()?.source === 'jd') {
+              <span class="chip chip-teal follow-tag"><app-icon name="brief" /> From the job description</span>
+            }
+            <p class="q" [class.typing]="phase() === 'asking'">{{ shownQuestion() }}</p>
+            <div class="q-meta">
+              <span class="tiny muted mono">{{ turn()?.type }} · level {{ turn()?.difficulty }}</span>
+              @if (turn()?.untranslated) { <span class="tiny muted">(question shown in English)</span> }
+              @if (isVoice() && phase() !== 'asking') {
+                <button type="button" class="btn btn-quiet btn-sm" (click)="replayQuestion()"><app-icon name="play" /> Replay</button>
+              }
+            </div>
+          </div>
+        </section>
+
+        <section class="candidate">
+          @if (isVideo()) {
+            <div class="self">
+              <video #selfView playsinline muted autoplay></video>
+              @if (media()?.recording()) { <span class="rec"><i></i> REC</span> }
+              @if (!mediaReady()) { <div class="ph"><app-icon name="video" /><span class="small">Camera off</span></div> }
+            </div>
+          }
+
+          @if (limit() && (phase() === 'answering' || phase() === 'asking')) {
+            <div class="timer" [class.low]="(remaining() ?? 99) <= 15">
+              <div class="t-bar"><span [style.transform]="'scaleX(' + (1 - timePct() / 100) + ')'"></span></div>
+              <span class="mono small">{{ fmt(remaining()) }}</span>
+            </div>
+          }
+          @if (interrupted() && phase() === 'answering') {
+            <div class="interrupt" role="alert"><app-icon name="flame" /> {{ persona()?.name }}: “Get to the point — what did <em>you</em> do?”</div>
+          }
+
+          @switch (phase()) {
+            @case ('asking') {
+              <div class="waiting"><span class="dots"><i></i><i></i><i></i></span> {{ isVoice() ? persona()?.name + ' is asking…' : '' }}</div>
+            }
+            @case ('answering') {
+              @if (!isVoice() || typing()) {
+                <div class="answer-box">
+                  <label class="sr-only" for="answer">Your answer</label>
+                  <textarea id="answer" #answerBox class="textarea" [ngModel]="answer()" (ngModelChange)="onType($event)" maxlength="12000" placeholder="Take a breath, then answer as you would out loud…" data-testid="answer"></textarea>
+                  <div class="spread">
+                    <span class="tiny muted mono">{{ wordCount() }} words · {{ fmt(elapsed()) }}</span>
+                    <div class="row">
+                      <button type="button" class="btn btn-quiet btn-sm" (click)="skip()"><app-icon name="skip" /> Skip</button>
+                      <button type="button" class="btn btn-accent" (click)="submit()" [disabled]="answer().trim().length < 2" data-testid="submit">Send answer <app-icon name="arrow" /></button>
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <div class="listening">
+                  <app-waveform [level]="level()" />
+                  <div class="transcript" aria-live="polite">
+                    @if (sttFallback()) {
+                      <span class="muted">Recording your answer… press <strong>Done</strong> when you finish.</span>
+                    } @else if (liveTranscript()) {
+                      {{ speech.finalText() }} <span class="interim">{{ speech.interimText() }}</span>
+                    } @else {
+                      <span class="muted">Listening — start whenever you’re ready.</span>
+                    }
+                  </div>
+                  @if (speech.error(); as se) { <div class="note bad small"><app-icon name="alert" /> {{ se }}</div> }
+                  <div class="spread">
+                    <button type="button" class="btn btn-quiet btn-sm" (click)="switchToTyping()"><app-icon name="type" /> Type instead</button>
+                    <div class="row">
+                      <button type="button" class="btn btn-quiet btn-sm" (click)="skip()"><app-icon name="skip" /> Skip</button>
+                      <button type="button" class="btn btn-accent" (click)="finishAnswering()" data-testid="done"><app-icon name="stop" /> Done</button>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+            @case ('review') {
+              <div class="answer-box">
+                <span class="small muted">Check your transcript — fix anything the recogniser got wrong, then send.</span>
+                @if (transcribing()) { <div class="waiting"><span class="dots"><i></i><i></i><i></i></span> Transcribing…</div> }
+                <textarea #answerBox class="textarea" [ngModel]="answer()" (ngModelChange)="answer.set($event)" maxlength="12000" placeholder="Nothing was captured — type your answer here." data-testid="answer"></textarea>
+                <div class="spread">
+                  <button type="button" class="btn btn-quiet btn-sm" (click)="rerecord()"><app-icon name="refresh" /> Answer again</button>
+                  <button type="button" class="btn btn-accent" (click)="submit()" [disabled]="answer().trim().length < 2" data-testid="submit">Send answer <app-icon name="arrow" /></button>
+                </div>
+              </div>
+            }
+            @case ('evaluating') {
+              <div class="waiting big"><span class="dots"><i></i><i></i><i></i></span> {{ persona()?.name }} is thinking about your answer…</div>
+            }
+            @case ('feedback') {
+              @if (lastEval(); as ev) {
+                <div class="feedback anim-rise" data-testid="feedback">
+                  <div class="fb-head">
+                    <div class="score" [attr.data-tone]="scoreTone(ev.overall)"><span>{{ ev.overall }}</span><small>/10</small></div>
+                    <div class="fb-chips">
+                      @if (ev.fillers) { <span class="chip" [class.chip-warn]="ev.fillers.total > 2">Fillers · {{ ev.fillers.total }}</span> }
+                      <span class="chip" [class.chip-good]="ev.gaps.coverage >= 0.7">Key points · {{ ev.gaps.covered.length }}/{{ ev.gaps.covered.length + ev.gaps.missing.length }}</span>
+                      @if (ev.star.applicable) { <span class="chip" [class.chip-good]="ev.star.score >= 75">STAR · {{ ev.star.score }}</span> }
+                      @if (ev.timing.wpm) { <span class="chip">{{ ev.timing.wpm }} wpm</span> }
+                    </div>
+                  </div>
+                  @if (ev.feedback.strengths[0]) { <p class="fb-line good"><app-icon name="check" /> {{ ev.feedback.strengths[0] }}</p> }
+                  @if (ev.feedback.improvements[0]) { <p class="fb-line warn"><app-icon name="arrow" /> {{ ev.feedback.improvements[0] }}</p> }
+                  @if (ev.fillers && ev.fillers.total > 0) {
+                    <details class="your-answer"><summary class="small">Your answer, fillers highlighted</summary><p class="small"><app-highlight [text]="answer()" [marks]="ev.fillers.marks" /></p></details>
+                  }
+                  @if (lastResult()?.difficulty; as d) {
+                    @if (d.change !== 0) {
+                      <p class="tiny muted diffnote"><app-icon name="sliders" /> {{ d.reason }} Now at level {{ d.level }}.</p>
+                    }
+                  }
+                  <div class="spread">
+                    <span class="tiny muted">{{ lastResult()?.next?.kind === 'follow-up' ? persona()?.name + ' has a follow-up.' : 'Press Enter to continue.' }}</span>
+                    <button type="button" class="btn btn-accent" (click)="next()" data-testid="next">{{ lastResult()?.next?.kind === 'follow-up' ? 'Hear the follow-up' : 'Next question' }} <app-icon name="arrow" /></button>
+                  </div>
+                </div>
+              }
+            }
+            @case ('finishing') {
+              <div class="waiting big"><span class="dots"><i></i><i></i><i></i></span> {{ finishingNote() }}</div>
+            }
+          }
+        </section>
+      </div>
+    }
+  }
+
+  @if (confirmEnd()) {
+    <div class="modal-backdrop" (click)="confirmEnd.set(false)"></div>
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <h3 id="end-title">End the interview now?</h3>
+      <p class="muted">You’ll get a report for the questions you’ve answered so far.</p>
+      <div class="row end-actions">
+        <button type="button" class="btn btn-ghost" (click)="confirmEnd.set(false)">Keep going</button>
+        <button type="button" class="btn btn-accent" (click)="finish()" data-testid="confirm-end">End and see report</button>
+      </div>
+    </div>
+  }
+</div>

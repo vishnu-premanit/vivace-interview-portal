@@ -1,0 +1,31 @@
+.wrap { min-height: 100dvh; display: grid; grid-template-columns: minmax(320px, 0.9fr) 1.1fr; }
+.side { background: var(--ink); color: var(--paper); padding: 40px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+.side ::ng-deep .logo { color: var(--paper); }
+blockquote { margin: 0; max-width: 34ch; }
+blockquote p { font-family: var(--font-display); font-size: clamp(1.5rem, 2.4vw, 2.1rem); line-height: 1.25; font-style: italic; }
+blockquote .muted { color: color-mix(in srgb, var(--paper) 55%, transparent); }
+.staves { display: grid; gap: 22px; opacity: .25; }
+.staves .staff { background: repeating-linear-gradient(to bottom, var(--paper) 0 1px, transparent 1px 4px); }
+.panel { display: grid; place-items: center; padding: 32px var(--gutter); }
+.mobile-logo { display: none; }
+.form-box { width: 100%; max-width: 420px; }
+.form-box h1 { font-size: clamp(2rem, 4vw, 2.8rem); margin: 10px 0 6px; }
+form { margin-top: 26px; }
+.pw { position: relative; }
+.pw .input { padding-right: 48px; }
+.pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 8px; display: grid; place-items: center; }
+.pw-toggle:hover { color: var(--ink); background: var(--surface-2); }
+.strength { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; }
+.strength i { height: 4px; border-radius: 2px; background: var(--line); transition: background-color var(--dur-2); }
+.strength[data-s='1'] i:nth-child(-n + 1), .strength[data-s='2'] i:nth-child(-n + 2) { background: var(--mustard); }
+.strength[data-s='3'] i:nth-child(-n + 3), .strength[data-s='4'] i { background: var(--good); }
+.form-error { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-size: .88rem; margin-bottom: 14px; animation: shake .4s var(--ease-out); }
+@keyframes shake { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+.note { margin: 14px 0 0; }
+.terms { margin-top: 16px; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .mobile-logo { display: block; width: 100%; max-width: 420px; margin-bottom: 26px; }
+  .panel { place-items: start center; }
+}

@@ -1,0 +1,169 @@
+<header class="nav" [class.open]="menuOpen()">
+  <div class="container nav-inner">
+    <app-logo />
+    <nav class="links" aria-label="Main">
+      <a href="#how" (click)="menuOpen.set(false)">How it works</a>
+      <a href="#features" (click)="menuOpen.set(false)">What it notices</a>
+      <a href="#streams" (click)="menuOpen.set(false)">Streams</a>
+    </nav>
+    <div class="actions">
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/app" class="btn btn-sm">Open dashboard <app-icon name="arrow" /></a>
+      } @else {
+        <a routerLink="/login" class="btn btn-quiet btn-sm hide-sm">Sign in</a>
+        <a routerLink="/register" class="btn btn-accent btn-sm">Start practising</a>
+      }
+      <button class="icon-btn menu-btn" type="button" (click)="menuOpen.set(!menuOpen())" [attr.aria-expanded]="menuOpen()" aria-label="Menu">
+        <app-icon [name]="menuOpen() ? 'x' : 'menu'" />
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero container">
+    <div class="hero-copy stagger">
+      <span class="eyebrow" style="--i:0">Interview practice · tempo marking: <em class="serif">vivace</em></span>
+      <h1 style="--i:1">Rehearse the interview <em class="serif accent">before</em> it happens.</h1>
+      <p class="lede" style="--i:2">
+        An interviewer that listens. It asks, follows up when you’re vague, raises the bar when you’re good, and remembers the habits
+        you keep repeating — in text, by voice or on camera.
+      </p>
+      <div class="cta" style="--i:3">
+        <a [routerLink]="auth.isLoggedIn() ? '/app/new' : '/register'" class="btn btn-accent btn-lg">Take a practice interview <app-icon name="arrow" /></a>
+        <a href="#how" class="btn btn-ghost btn-lg">See how it works</a>
+      </div>
+      <p class="fine" style="--i:4">Free to use. Works offline-first without an AI key; plugs into Gemini when you add one.</p>
+    </div>
+
+    <div class="demo" aria-label="Example of a live interview" role="img">
+      <div class="demo-card">
+        <div class="demo-top">
+          <span class="persona"><i></i>Arjun · Technical Lead</span>
+          <span class="mono tiny muted">Q2 / 6 · level 3</span>
+        </div>
+        <p class="demo-q">{{ demo().q }}</p>
+        <div class="demo-a">
+          <span class="you">You</span>
+          <p>{{ typed() }}<span class="caret"></span></p>
+        </div>
+        <div class="demo-chips">
+          <span class="chip" [class.chip-warn]="fillerCount() > 0">Fillers · {{ fillerCount() }}</span>
+          <span class="chip chip-teal">Action ✓</span>
+          <span class="chip" [class.chip-good]="showFollow()">Result {{ showFollow() ? '✓' : '…' }}</span>
+        </div>
+        @if (showFollow()) {
+          <div class="follow">
+            <span class="mono tiny">Follow-up</span>
+            <p>{{ demo().follow }}</p>
+          </div>
+        }
+      </div>
+      <div class="demo-shadow" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="tempo container" appReveal>
+    <div class="staff" aria-hidden="true"></div>
+    <div class="tempi">
+      <div class="tempo-item">
+        <span class="mark serif">Andante</span>
+        <h3><app-icon name="type" /> Text</h3>
+        <p>Type your answers at your own pace. Best for structuring stories and technical depth.</p>
+      </div>
+      <div class="tempo-item">
+        <span class="mark serif">Moderato</span>
+        <h3><app-icon name="mic" /> Voice</h3>
+        <p>The interviewer speaks; you answer out loud. Live transcript, pace and filler tracking.</p>
+      </div>
+      <div class="tempo-item">
+        <span class="mark serif">Vivace</span>
+        <h3><app-icon name="video" /> Video</h3>
+        <p>Camera on, full recording, and practical feedback on lighting, framing and movement.</p>
+      </div>
+    </div>
+    <div class="staff" aria-hidden="true"></div>
+  </section>
+
+  <section id="how" class="how container">
+    <div class="section-head" appReveal>
+      <span class="eyebrow">How a session runs</span>
+      <h2>Thirty seconds to set up. <em class="serif">Ten minutes</em> that feel like the real thing.</h2>
+    </div>
+    <ol class="steps">
+      <li appReveal="0"><span class="n mono">01</span><h3>Pick your stream and role</h3><p>BSc IT, BCA, BCom, BBA, MBA and more. Add your resume or a real job description if you have one.</p></li>
+      <li appReveal="1"><span class="n mono">02</span><h3>Choose who interviews you</h3><p>A warm HR partner, a curious tech lead, a formal panel chair, a fast founder — or Stress mode.</p></li>
+      <li appReveal="2"><span class="n mono">03</span><h3>Answer, and get pushed</h3><p>Vague answers get a follow-up. Strong ones raise the difficulty. Nothing is scripted end-to-end.</p></li>
+      <li appReveal="3"><span class="n mono">04</span><h3>Read the debrief</h3><p>Scores, missed points, filler heatmap, timing, STAR breakdown, readiness and what to fix next.</p></li>
+    </ol>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <div class="section-head" appReveal>
+        <span class="eyebrow">Twenty things it notices</span>
+        <h2>Not a question bank. <em class="serif">An interviewer with a memory.</em></h2>
+      </div>
+      @for (g of groups; track g) {
+        <div class="group" appReveal>
+          <h4 class="group-name">{{ g }}</h4>
+          <div class="feature-grid">
+            @for (f of featuresIn(g); track f.no; let i = $index) {
+              <article class="feature" appReveal [appReveal]="i">
+                <span class="no mono">{{ f.no }}</span>
+                <h3>{{ f.name }}</h3>
+                <p>{{ f.line }}</p>
+              </article>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section id="streams" class="streams container">
+    <div class="section-head" appReveal>
+      <span class="eyebrow">Streams</span>
+      <h2>Questions written for <em class="serif">your</em> degree.</h2>
+      <p class="muted">Each stream has its own technical questions, target competency profile and roles — plus a shared set of HR and behavioural questions.</p>
+    </div>
+    <div class="stream-list" appReveal>
+      @for (s of streams(); track s.id; let i = $index) {
+        <div class="stream" [style.--i]="i">
+          <strong>{{ s.name }}</strong>
+          <span>{{ s.roles.slice(0, 2).join(' · ') }}</span>
+        </div>
+      } @empty {
+        @for (n of ['BSc IT', 'BCA', 'BSc CS', 'BTech CSE', 'MCA', 'BSc Data Science', 'BCom', 'MCom', 'BBA', 'MBA', 'BA']; track n) {
+          <div class="stream"><strong>{{ n }}</strong></div>
+        }
+      }
+    </div>
+  </section>
+
+  <section class="honest container" appReveal>
+    <div class="honest-card">
+      <app-icon name="shield" />
+      <div>
+        <h3>Honest by design</h3>
+        <p>
+          Camera analysis runs in your browser on tiny thumbnails and only sends back numbers like “lighting: dim”. It never claims to read emotions,
+          personality or honesty. Predictions are practice estimates, and they say so. Passwords are hashed with bcrypt, sessions use httpOnly cookies,
+          and you can delete your account and every recording in one click.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="final container" appReveal>
+    <h2>The best time to get nervous is <em class="serif">now</em>, not on the day.</h2>
+    <a [routerLink]="auth.isLoggedIn() ? '/app/new' : '/register'" class="btn btn-accent btn-lg">Start your first interview <app-icon name="arrow" /></a>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container spread">
+    <app-logo />
+    <p class="tiny muted">Built as a final-year project. Angular · Express · FastAPI · MongoDB · Gemini.</p>
+  </div>
+</footer>
