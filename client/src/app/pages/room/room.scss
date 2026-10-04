@@ -1,6 +1,6 @@
 :host { display: block; }
 .room { min-height: 100dvh; display: flex; flex-direction: column; --persona: hsl(var(--h) 58% 46%); --persona-soft: hsl(var(--h) 60% 50% / .14); }
-.bar { display: flex; align-items: center; gap: 14px; padding: 12px var(--gutter); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 88%, transparent); position: sticky; top: 0; z-index: 20; }
+.room-bar { display: flex; align-items: center; gap: 14px; padding: 12px var(--gutter); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 88%, transparent); position: sticky; top: 0; z-index: 20; }
 .back { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); color: var(--ink); transition: transform var(--dur-1); }
 .back:hover { transform: translateX(-2px); }
 .who { display: grid; line-height: 1.2; min-width: 0; }
@@ -37,7 +37,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: 1px 6px; border:
 .good { color: var(--good); display: flex; gap: 6px; align-items: center; }
 
 /* ---------- Stage ---------- */
-.stage { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(16px, 3vw, 36px); padding: clamp(16px, 3vw, 40px) var(--gutter); max-width: 1280px; width: 100%; margin: 0 auto; align-items: start; }
+.stage { flex: 1; display: grid; align-content: start; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(16px, 3vw, 36px); padding: clamp(16px, 3vw, 40px) var(--gutter); max-width: 1280px; width: 100%; margin: 0 auto; align-items: start; }
 @media (max-width: 900px) { .stage { grid-template-columns: 1fr; } }
 .interviewer { display: grid; gap: 18px; justify-items: center; position: sticky; top: 90px; }
 @media (max-width: 900px) { .interviewer { position: static; } }
@@ -47,13 +47,13 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: 1px 6px; border:
 .head { fill: var(--persona-soft); stroke: var(--persona); stroke-width: 2; transition: transform .6s var(--ease-out); transform-origin: center; }
 .eyes circle { fill: var(--persona); transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
 .mouth { fill: var(--persona); transform-box: fill-box; transform-origin: center; transition: transform .2s; }
-.speaking .mouth { animation: talk .32s ease-in-out infinite alternate; }
-.listening .head { transform: rotate(-3deg); }
-.listening .eyes circle { animation: blink 5s infinite, look 4s ease-in-out infinite; }
-.thinking .eyes { transform: translateY(-3px); transition: transform .4s; }
+.is-speaking .mouth { animation: talk .32s ease-in-out infinite alternate; }
+.is-listening .head { transform: rotate(-3deg); }
+.is-listening .eyes circle { animation: blink 5s infinite, look 4s ease-in-out infinite; }
+.is-thinking .eyes { transform: translateY(-3px); transition: transform .4s; }
 .ring { position: absolute; inset: 8%; border-radius: 50%; border: 2px solid var(--persona); opacity: 0; }
-.speaking .ring { animation: pulse-ring 1.6s var(--ease-out) infinite; }
-.speaking .r2 { animation-delay: .8s; }
+.is-speaking .ring { animation: pulse-ring 1.6s var(--ease-out) infinite; }
+.is-speaking .r2 { animation-delay: .8s; }
 @keyframes talk { from { transform: scaleY(.6) scaleX(.9); } to { transform: scaleY(2.6) scaleX(.75); } }
 @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
 @keyframes look { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(2px); } }
@@ -115,4 +115,4 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: 1px 6px; border:
 /* Video mode: interviewer and self-view sit side by side like a call. */
 .room.video .stage { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
 @media (max-width: 900px) { .room.video .stage { grid-template-columns: 1fr; } .room.video .self { order: -1; } }
-.room.stress .bar { border-bottom-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.room.stress .room-bar { border-bottom-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }

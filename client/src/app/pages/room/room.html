@@ -1,5 +1,5 @@
 <div class="room" [class.video]="isVideo()" [class.voice]="isVoice()" [class.stress]="interview()?.stress" [style.--h]="persona()?.hue ?? 28">
-  <header class="bar">
+  <header class="room-bar">
     <a routerLink="/app" class="back" aria-label="Leave to dashboard" (click)="$event.preventDefault(); confirmEnd.set(true)"><app-icon name="arrow-left" /></a>
     <div class="who">
       <strong>{{ persona()?.name }}</strong>
@@ -85,7 +85,7 @@
     @default {
       <div class="stage">
         <section class="interviewer" aria-live="polite">
-          <div class="avatar" [class.speaking]="speech.speaking()" [class.listening]="phase() === 'answering' && !speech.speaking()" [class.thinking]="phase() === 'evaluating'">
+          <div class="avatar" [class.is-speaking]="speech.speaking()" [class.is-listening]="phase() === 'answering' && !speech.speaking()" [class.is-thinking]="phase() === 'evaluating'">
             <span class="ring r1"></span><span class="ring r2"></span>
             <svg viewBox="0 0 120 120" aria-hidden="true">
               <circle cx="60" cy="60" r="44" class="head" />

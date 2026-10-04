@@ -314,6 +314,16 @@ router.post(
   })
 );
 
+/** Identify WebM/MP4/Ogg by magic bytes — browsers' declared types are unreliable in multipart uploads. */
+function sniffMediaType(buf, mode) {
+  if (!buf || buf.length < 12) return null;
+  const kind = mode === 'video' ? 'video' : 'audio';
+  if (buf.readUInt32BE(0) === 0x1a45dfa3) return `${kind}/webm`;
+  if (buf.toString('latin1', 4, 8) === 'ftyp') return `${kind}/mp4`;
+  if (buf.toString('latin1', 0, 4) === 'OggS') return `${kind}/ogg`;
+  return null;
+}
+
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } });
 
 router.post(
@@ -323,11 +333,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const session = await loadOwned(req.params.id, req.user._id, 'language status user');
     if (!req.file) throw new HttpError(400, 'No audio received.');
-    if (!/^audio\/|^video\/webm/.test(req.file.mimetype)) throw new HttpError(415, 'Unsupported audio format.');
+    const audioMime = sniffMediaType(req.file.buffer, 'voice') || req.file.mimetype.split(';')[0];
+    if (!/^audio\/|^video\/webm/.test(audioMime)) throw new HttpError(415, 'Unsupported audio format.');
     if (!gemini.isEnabled()) {
       return res.status(503).json({ error: 'Server-side transcription needs a Gemini API key. Your browser speech recognition or typing still works.', text: null });
     }
-    const text = await gemini.transcribe(req.file.buffer, req.file.mimetype.split(';')[0], session.language);
+    const text = await gemini.transcribe(req.file.buffer, audioMime, session.language);
     if (!text) return res.status(502).json({ error: 'Could not transcribe that recording. Please type your answer.', text: null });
     res.json({ text });
   })
@@ -354,7 +365,7 @@ router.post(
     const session = await loadOwned(req.params.id, req.user._id);
     if (session.mode === 'text') throw new HttpError(400, 'Text interviews have no recording.');
     if (!req.file) throw new HttpError(400, 'No recording received.');
-    const mime = req.file.mimetype.split(';')[0];
+    const mime = sniffMediaType(req.file.buffer, session.mode) || req.file.mimetype.split(';')[0];
     if (!/^(video|audio)\/(webm|mp4|ogg|mpeg|x-matroska)$/.test(mime)) throw new HttpError(415, 'Unsupported recording format.');
     if (session.recording && session.recording.fileId) await db.deleteFile(session.recording.fileId);
     const fileId = await db.saveBuffer(req.file.buffer, `interview-${session._id}.${mime.split('/')[1]}`, mime, { user: req.user._id.toString(), kind: 'recording', interview: session._id.toString() });

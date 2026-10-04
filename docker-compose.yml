@@ -1,0 +1,18 @@
+# Local full stack: MongoDB + ML service + portal.  docker compose up --build  →  http://localhost:8080
+services:
+  mongo:
+    image: mongo:7
+    volumes: [mongo-data:/data/db]
+  ml:
+    build: ./ml-service
+  web:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/vivace
+      JWT_SECRET: change-this-to-a-long-random-string-of-48-characters
+      ML_SERVICE_URL: http://ml:8001
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on: [mongo, ml]
+volumes:
+  mongo-data:

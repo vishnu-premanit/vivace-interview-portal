@@ -212,7 +212,8 @@ export class MediaSession {
     return new Promise((resolve) => {
       rec.onstop = () => {
         this.recording.set(false);
-        const type = rec.mimeType || (this.withVideo ? 'video/webm' : 'audio/webm');
+        // Drop codec parameters: some multipart parsers choke on "codecs=vp9,opus".
+        const type = (rec.mimeType || (this.withVideo ? 'video/webm' : 'audio/webm')).split(';')[0];
         resolve(this.sessionChunks.length ? new Blob(this.sessionChunks, { type }) : null);
       };
       rec.stop();
@@ -239,7 +240,7 @@ export class MediaSession {
     const rec = this.answerRecorder;
     if (!rec || rec.state === 'inactive') return Promise.resolve(null);
     return new Promise((resolve) => {
-      rec.onstop = () => resolve(this.answerChunks.length ? new Blob(this.answerChunks, { type: rec.mimeType || 'audio/webm' }) : null);
+      rec.onstop = () => resolve(this.answerChunks.length ? new Blob(this.answerChunks, { type: (rec.mimeType || 'audio/webm').split(';')[0] }) : null);
       rec.stop();
     });
   }

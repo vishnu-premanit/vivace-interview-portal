@@ -1,0 +1,40 @@
+# Render Blueprint — creates the web portal and (optionally) the ML service.
+# Dashboard → New → Blueprint → pick this repo. Fill in the "sync: false" values when prompted.
+services:
+  - type: web
+    name: vivace
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: vivace-ml
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
+    name: vivace-ml
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9

@@ -145,7 +145,15 @@ describe('voice & video specifics', () => {
     const video = Buffer.alloc(4096, 7);
     const up = await agent.post(`/api/interviews/${id}/recording`).attach('recording', video, { filename: 'take.webm', contentType: 'video/webm' });
     expect(up.status).toBe(201);
-    const fileId = up.body.recording.id;
+    let fileId = up.body.recording.id;
+    // A real WebM whose part was mislabelled text/plain (busboy does this for "codecs=vp9,opus") is accepted by sniffing.
+    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(200, 1)]);
+    const sniffed = await agent.post(`/api/interviews/${id}/recording`).attach('recording', webm, { filename: 'take.webm', contentType: 'text/plain' });
+    expect(sniffed.status).toBe(201);
+    expect(sniffed.body.recording.mime).toBe('video/webm');
+    const up2 = await agent.post(`/api/interviews/${id}/recording`).attach('recording', video, { filename: 'take.webm', contentType: 'video/webm' });
+    expect(up2.status).toBe(201);
+    fileId = up2.body.recording.id; // earlier recordings were replaced
     const bad = await agent.post(`/api/interviews/${id}/recording`).attach('recording', Buffer.from('x'), { filename: 'evil.html', contentType: 'text/html' });
     expect(bad.status).toBe(415);
 

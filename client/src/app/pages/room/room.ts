@@ -379,7 +379,8 @@ export class Room implements OnInit, OnDestroy {
 
   async next(): Promise<void> {
     const res = this.lastResult();
-    if (!res || !res.next) return;
+    // Guard against double clicks / Enter repeats re-asking the question and wiping a fresh answer.
+    if (this.phase() !== 'feedback' || !res || !res.next) return;
     await this.ask(res.next);
   }
 

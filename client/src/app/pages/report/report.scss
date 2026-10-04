@@ -1,4 +1,4 @@
-.crumb { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; margin-bottom: 10px; }
+.crumb { display: flex; width: fit-content; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; margin-bottom: 10px; }
 .crumb:hover { color: var(--ink); }
 .page-head .chips { margin-top: 10px; }
 .cap { text-transform: capitalize; }

@@ -1,0 +1,26 @@
+{
+  "name": "vivace-interview-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vivace — AI multi-modal interview practice portal (Angular + Express + FastAPI + MongoDB + Gemini)",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "build": "npm --prefix client run build",
+    "render-build": "npm --prefix server ci --omit=dev && npm --prefix client ci --include=dev && npm --prefix client run build",
+    "start": "node server/src/server.js",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client start",
+    "dev:ml": "cd ml-service && uvicorn app.main:app --reload --port 8001",
+    "test:server": "npm --prefix server test",
+    "test:client": "npm --prefix client test -- --watch=false",
+    "test:ml": "cd ml-service && (test -x .venv/bin/python && .venv/bin/python -m pytest -q || python -m pytest -q)",
+    "test:e2e": "playwright test",
+    "test": "npm run test:server && npm run test:client && npm run test:ml && npm run build && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}

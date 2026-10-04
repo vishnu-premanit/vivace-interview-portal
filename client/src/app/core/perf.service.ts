@@ -24,8 +24,9 @@ export class PerfService {
     } catch {
       this.userLowPower = false;
     }
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    mq.addEventListener?.('change', () => this.apply());
+    if (typeof window.matchMedia === 'function') {
+      window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => this.apply());
+    }
     this.apply();
   }
 
@@ -44,7 +45,7 @@ export class PerfService {
   }
 
   private apply(): void {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const level: MotionLevel = reduced ? 'off' : this.userLowPower || this.lowEnd() ? 'lite' : 'full';
     this.level.set(level);
     document.documentElement.dataset['motion'] = level;

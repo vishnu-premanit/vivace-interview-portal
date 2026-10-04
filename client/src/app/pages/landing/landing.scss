@@ -34,7 +34,7 @@
 .lede { font-size: clamp(1.02rem, 1.4vw, 1.18rem); color: var(--ink-2); max-width: 54ch; }
 .cta { display: flex; gap: 12px; flex-wrap: wrap; margin: 28px 0 14px; }
 .fine { font-size: .8rem; color: var(--muted); }
-@media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .hero { grid-template-columns: 1fr; } .demo { margin: 0 14px 18px 4px; } }
 
 .demo { position: relative; }
 .demo-card {
