@@ -17,7 +17,7 @@ let lastDeep = null;
 function cleanError(err) {
   const raw = err && err.message ? String(err.message) : String(err);
   // Never echo anything that looks like a key back out.
-  return raw.replace(/AIza[0-9A-Za-z_-]{10,}/g, '[key]').slice(0, 300);
+  return raw.replace(/AIza[0-9A-Za-z_-]{10,}|AQ\.[0-9A-Za-z_.-]{20,}/g, '[key]').slice(0, 300);
 }
 
 function markOk() {
