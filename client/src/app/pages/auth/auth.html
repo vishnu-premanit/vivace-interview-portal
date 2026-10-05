@@ -1,0 +1,79 @@
+<div class="wrap">
+  <aside class="side" aria-hidden="true">
+    <app-logo />
+    <blockquote>
+      <p>“The candidates who do well aren’t the ones with perfect answers. They’re the ones who’ve said their answers out loud before.”</p>
+      <span class="muted small">— something every placement officer will tell you</span>
+    </blockquote>
+    <div class="staves">
+      @for (i of [0, 1, 2]; track i) {
+        <div class="staff"></div>
+      }
+    </div>
+  </aside>
+
+  <main id="main" class="panel">
+    <div class="mobile-logo"><app-logo /></div>
+    <div class="form-box anim-rise">
+      <span class="eyebrow">{{ mode() === 'login' ? 'Welcome back' : 'New here' }}</span>
+      <h1>{{ mode() === 'login' ? 'Sign in' : 'Create your account' }}</h1>
+      <p class="muted">
+        @if (mode() === 'login') {
+          New to Vivace? <a routerLink="/register">Create an account</a>
+        } @else {
+          Already have one? <a routerLink="/login">Sign in</a>
+        }
+      </p>
+
+      @if (expired()) {
+        <div class="note" role="status"><app-icon name="clock" /> Your session ended. Sign in again to pick up where you left off.</div>
+      }
+
+      <form (ngSubmit)="submit()" novalidate>
+        @if (mode() === 'register') {
+          <div class="field">
+            <label for="name">Full name</label>
+            <input id="name" name="name" class="input" autocomplete="name" [(ngModel)]="name" required maxlength="80" [class.invalid]="submitted() && name.trim().length < 2" />
+          </div>
+        }
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" class="input" autocomplete="email" inputmode="email" [(ngModel)]="email" required [class.invalid]="submitted() && !emailValid()" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pw">
+            <input id="password" name="password" class="input" [type]="showPassword() ? 'text' : 'password'" [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'" [(ngModel)]="password" required maxlength="128" />
+            <button type="button" class="pw-toggle" (click)="showPassword.set(!showPassword())" [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"><app-icon [name]="showPassword() ? 'eye' : 'lock'" /></button>
+          </div>
+          @if (mode() === 'register') {
+            <div class="strength" [attr.data-s]="strength" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <span class="hint">At least 8 characters with a letter and a number.</span>
+          }
+        </div>
+        @if (mode() === 'register') {
+          <div class="field">
+            <label for="stream">Your stream</label>
+            <select id="stream" name="stream" class="select" [(ngModel)]="stream">
+              @for (s of streams(); track s.id) {
+                <option [value]="s.id">{{ s.name }} — {{ s.full }}</option>
+              } @empty {
+                <option value="bsc-it">BSc IT</option>
+              }
+            </select>
+          </div>
+        }
+        @if (error()) {
+          <div class="form-error" role="alert"><app-icon name="alert" /> {{ error() }}</div>
+        }
+        <button class="btn btn-accent btn-lg btn-block" type="submit" [disabled]="busy()">
+          @if (busy()) {
+            <span class="spinner"></span>
+          }
+          {{ mode() === 'login' ? 'Sign in' : 'Create account' }}
+        </button>
+      </form>
+      <p class="tiny muted terms">Your password is hashed with bcrypt. We use a secure, httpOnly cookie — no tokens in your browser storage.</p>
+    </div>
+  </main>
+</div>

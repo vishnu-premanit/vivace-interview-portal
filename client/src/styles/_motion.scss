@@ -1,0 +1,138 @@
+// All animation is transform/opacity only so it stays on the compositor (60fps on low-end GPUs).
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@keyframes drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4vw, -3vh, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+@keyframes slide-staff {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.anim-rise {
+  animation: rise var(--dur-3) var(--ease-out) both;
+}
+.anim-fade {
+  animation: fade var(--dur-3) var(--ease-out) both;
+}
+
+// Staggered children: set --i on each child.
+.stagger > * {
+  animation: rise 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+// Scroll reveal (class toggled by RevealDirective)
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+// Route transitions (View Transitions API; browsers without it just swap instantly)
+::view-transition-old(root) {
+  animation: 180ms var(--ease-in-out) both vt-out;
+}
+::view-transition-new(root) {
+  animation: 360ms var(--ease-out) both vt-in;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+}
+
+// Motion levels: "lite" (low-end device) keeps micro-interactions but drops ambient
+// loops; "off" (prefers-reduced-motion or user choice) removes nearly everything.
+html[data-motion='lite'] {
+  .ambient,
+  .ambient * {
+    animation: none !important;
+  }
+}
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion='off'] .reveal {
+  opacity: 1;
+  transform: none;
+}
+html[data-motion='off'] ::view-transition-old(root),
+html[data-motion='off'] ::view-transition-new(root) {
+  animation: none;
+}

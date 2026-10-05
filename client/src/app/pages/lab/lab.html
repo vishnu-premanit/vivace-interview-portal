@@ -1,0 +1,88 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">A/B answer lab</span>
+    <h1>Two takes. <em class="serif">One winner.</em></h1>
+    <p>Write the same answer two ways — change one thing, like adding a number or cutting the intro — and see exactly what it does to your score.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="field">
+    <label for="q">Question</label>
+    <input id="q" class="input" [ngModel]="question()" (ngModelChange)="question.set($event); questionId.set(undefined)" maxlength="600" />
+  </div>
+  <div class="chips samples">
+    <span class="tiny muted">Try:</span>
+    @for (s of meta.meta()?.sampleQuestions ?? []; track s.id) {
+      <button type="button" class="chip sample" (click)="pick(s.id, s.text)">{{ s.text.length > 48 ? s.text.slice(0, 46) + '…' : s.text }}</button>
+    }
+  </div>
+  <div class="versions">
+    <div class="field">
+      <label for="a">Version A</label>
+      <textarea id="a" class="textarea" [ngModel]="a()" (ngModelChange)="a.set($event)" maxlength="6000" placeholder="Your first attempt…" data-testid="ab-a"></textarea>
+    </div>
+    <button type="button" class="icon-btn swap" (click)="swap()" aria-label="Swap versions" title="Swap A and B"><app-icon name="refresh" /></button>
+    <div class="field">
+      <label for="b">Version B</label>
+      <textarea id="b" class="textarea" [ngModel]="b()" (ngModelChange)="b.set($event)" maxlength="6000" placeholder="The rewrite…" data-testid="ab-b"></textarea>
+    </div>
+  </div>
+  <button type="button" class="btn btn-accent" (click)="compare()" [disabled]="busy() || a().trim().length < 10 || b().trim().length < 10" data-testid="ab-compare">
+    @if (busy()) { <span class="spinner"></span> } Compare versions
+  </button>
+</section>
+
+@if (result(); as r) {
+  <section class="card result anim-rise" data-testid="ab-result">
+    <div class="verdict" [attr.data-w]="r.winner">
+      @if (r.winner === 'tie') {
+        <h2>It’s a <em class="serif">tie</em>.</h2>
+      } @else {
+        <h2>Version <em class="serif">{{ r.winner }}</em> wins by {{ r.delta < 0 ? -r.delta : r.delta }} points.</h2>
+      }
+      <div class="scores"><span class="sa">A · {{ r.a.overall }}</span><span class="sb">B · {{ r.b.overall }}</span></div>
+    </div>
+    @if (r.aiVerdict) { <p class="lead">{{ r.aiVerdict }}</p> }
+    <div class="dims">
+      @for (d of r.dims; track d.key; let i = $index) {
+        <div class="dim" [style.--i]="i">
+          <span class="dl">{{ labels[d.key] }}</span>
+          <div class="pair">
+            <div class="bar-a"><span [style.width.%]="d.a * 10"></span></div>
+            <div class="bar-b"><span [style.width.%]="d.b * 10"></span></div>
+          </div>
+          <span class="mono tiny diff" [class.pos]="d.diff > 0" [class.neg]="d.diff < 0">{{ d.diff > 0 ? '+' : '' }}{{ d.diff }}</span>
+        </div>
+      }
+    </div>
+    <div class="grid grid-2 why">
+      <div>
+        <h4>Why</h4>
+        <ul>@for (x of r.reasons; track $index) { <li>{{ x }}</li> }</ul>
+      </div>
+      <div>
+        <h4>Best of both</h4>
+        <ul>@for (x of r.merge; track $index) { <li>{{ x }}</li> }</ul>
+      </div>
+    </div>
+    <div class="grid grid-2 texts">
+      <div><h4>A — fillers highlighted</h4><p class="small"><app-highlight [text]="a()" [marks]="r.a.fillers.marks" /></p></div>
+      <div><h4>B — fillers highlighted</h4><p class="small"><app-highlight [text]="b()" [marks]="r.b.fillers.marks" /></p></div>
+    </div>
+    @if (r.improved) {
+      <div class="improved"><h4>Suggested rewrite</h4><p>{{ r.improved }}</p></div>
+    }
+  </section>
+}
+
+@if (past().length) {
+  <section class="card past">
+    <h3>Earlier tests</h3>
+    <ul>
+      @for (p of past(); track p.id) {
+        <li><span class="small">{{ p.question }}</span><span class="mono tiny">A {{ p.result.a }} · B {{ p.result.b }} → {{ p.result.winner === 'tie' ? 'tie' : p.result.winner }}</span><span class="tiny muted">{{ p.createdAt | date: 'd MMM' }}</span></li>
+      }
+    </ul>
+  </section>
+}

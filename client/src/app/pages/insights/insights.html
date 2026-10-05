@@ -1,0 +1,158 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Insights</span>
+    <h1>Meet your <em class="serif">interview twin</em>.</h1>
+    <p>A model of how you interview — built from every answer you’ve given — plus your skill gaps and the habits Vivace is tracking.</p>
+  </div>
+  <button type="button" class="btn btn-accent" (click)="practise()"><app-icon name="target" /> Practise weak areas</button>
+</div>
+
+@if (loading()) {
+  <div class="card"><div class="skeleton" style="height: 260px"></div></div>
+} @else if (error()) {
+  <div class="card empty"><h3>{{ error() }}</h3></div>
+} @else {
+  @if (twin(); as tw) {
+    <section class="twin card" appReveal>
+      <span class="section-no">Interview digital twin</span>
+      @if (!tw.ready) {
+        <div class="empty"><h3>Your twin is still blank</h3><p>{{ tw.message }}</p><a routerLink="/app/new" class="btn btn-accent">Run an interview</a></div>
+      } @else {
+        <div class="twin-grid">
+          <div class="portrait">
+            <div class="arche">
+              <svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="32" cy="40" r="22" /><circle cx="48" cy="40" r="22" /></svg>
+              <div><span class="eyebrow">Archetype</span><h2>{{ tw.archetype?.name }}</h2></div>
+            </div>
+            <p class="lead">{{ tw.portrait }}</p>
+            <div class="chips">
+              @for (s of tw.strengths ?? []; track s) { <span class="chip chip-good">Strong: {{ s }}</span> }
+              @for (s of tw.risks ?? []; track s) { <span class="chip chip-bad">Risk: {{ s }}</span> }
+            </div>
+          </div>
+          <div class="delivery">
+            <h4>Delivery signature</h4>
+            <dl>
+              <div><dt>Average answer</dt><dd>{{ tw.delivery?.avgWords }} words</dd></div>
+              <div><dt>Speaking pace</dt><dd>{{ tw.delivery?.wpm ?? '—' }}{{ tw.delivery?.wpm ? ' wpm' : '' }}</dd></div>
+              <div><dt>Thinking time</dt><dd>{{ tw.delivery?.thinkSec ?? '—' }}{{ tw.delivery?.thinkSec ? ' s' : '' }}</dd></div>
+              <div><dt>Fillers</dt><dd>{{ tw.delivery?.fillersPer100 }} / 100 words</dd></div>
+              <div><dt>Hedges per answer</dt><dd>{{ tw.delivery?.hedgesPerAnswer }}</dd></div>
+              <div><dt>Results with numbers</dt><dd>{{ tw.delivery?.quantifiesResults ?? '—' }}{{ tw.delivery?.quantifiesResults !== null ? '%' : '' }}</dd></div>
+              <div><dt>Consistency</dt><dd>{{ tw.consistency }}/100</dd></div>
+              <div><dt>Under stress</dt><dd>{{ tw.stressDelta === null || tw.stressDelta === undefined ? 'not tested' : (tw.stressDelta > 0 ? '+' : '') + tw.stressDelta + ' pts' }}</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="sim">
+          <div>
+            <h3>Ask your twin</h3>
+            <p class="small muted">How would you do on a question you haven’t practised yet? Your twin predicts from your history.</p>
+            <div class="sim-form">
+              <select class="select" [ngModel]="simCompetency()" (ngModelChange)="simCompetency.set($event)" aria-label="Competency">
+                @for (c of metaSvc.meta()?.competencies ?? []; track c.id) { <option [value]="c.id">{{ c.label }}</option> }
+              </select>
+              <select class="select" [ngModel]="simDifficulty()" (ngModelChange)="simDifficulty.set(+$event)" aria-label="Difficulty">
+                @for (d of [1, 2, 3, 4, 5]; track d) { <option [value]="d">Level {{ d }}</option> }
+              </select>
+              <label class="switch"><input type="checkbox" [ngModel]="simStress()" (ngModelChange)="simStress.set($event)" /><span class="track"></span><span class="small">Under stress</span></label>
+              <button type="button" class="btn" (click)="simulate()" [disabled]="simBusy()">Predict</button>
+            </div>
+          </div>
+          @if (sim(); as s) {
+            <div class="sim-out anim-rise">
+              <app-ring [value]="s.predicted" style="--s: 84px" />
+              <div>
+                <strong>{{ s.competency }}, level {{ s.difficulty }}{{ s.stress ? ', under stress' : '' }}</strong>
+                @if (s.note) { <p class="small muted">{{ s.note }}</p> }
+                @else { <p class="small muted">Confidence: {{ s.confidence }} ({{ s.evidence }} answer{{ s.evidence === 1 ? '' : 's' }} of evidence).</p> }
+                @if (s.pitfalls.length) { <p class="small">Likely pitfalls: {{ s.pitfalls.join(', ') }}.</p> }
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (tw.predictions?.length) {
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Competency</th><th>Predicted at level 3</th><th>Predicted at level 5</th></tr></thead>
+              <tbody>
+                @for (p of tw.predictions; track p.id) {
+                  <tr><td>{{ p.label }}</td><td class="mono">{{ p.atLevel3 ?? '—' }}</td><td class="mono">{{ p.atLevel5 ?? '—' }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </section>
+  }
+
+  @if (overview(); as o) {
+    <section class="grid grid-2 block">
+      <article class="card" appReveal>
+        <div class="card-title"><h3>Skill gap map</h3><span class="tiny muted">{{ o.skillGap.stream }} target profile</span></div>
+        <app-radar [axes]="radarAxes()" />
+        @if (o.skillGap.untested.length) { <p class="tiny muted">Not tested yet: {{ o.skillGap.untested.join(', ') }}.</p> }
+      </article>
+      <article class="card" appReveal="1">
+        <div class="card-title"><h3>Gap by competency</h3></div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Competency</th><th>You</th><th>Target</th><th>Gap</th><th>Trend</th></tr></thead>
+            <tbody>
+              @for (a of o.skillGap.axes; track a.id) {
+                <tr>
+                  <td>{{ a.label }}</td>
+                  <td class="mono">{{ a.current ?? '—' }}</td>
+                  <td class="mono">{{ a.target }}</td>
+                  <td class="mono" [class.bad]="(a.gap ?? 0) >= 15">{{ a.gap === null ? '—' : a.gap === 0 ? '✓' : '−' + a.gap }}</td>
+                  <td class="mono">{{ a.n ? (a.trend > 0 ? '▲' + a.trend : a.trend < 0 ? '▼' + -a.trend : '—') : '' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (o.skillGap.skills?.missingForJd?.length) {
+          <p class="small">Skills your last job description asked for that your resume lacks: <b>{{ o.skillGap.skills?.missingForJd?.join(', ') }}</b>.</p>
+        }
+      </article>
+    </section>
+
+    <section class="card block" appReveal>
+      <div class="card-title"><h3>Mistake memory</h3><span class="tiny muted">a habit clears after 4 clean answers in a row</span></div>
+      <div class="grid grid-2">
+        <div>
+          <h4>Still repeating</h4>
+          @if (o.mistakes.active.length) {
+            <ul class="mm">
+              @for (m of o.mistakes.active; track m.code) {
+                <li>
+                  <div class="spread"><strong>{{ m.label }}</strong><span class="mono tiny muted">seen ×{{ m.count }} · last {{ m.lastSeen | date: 'd MMM' }}</span></div>
+                  <p class="small muted">{{ m.tip }}</p>
+                  @if (m.details.length) { <p class="tiny">Recent: {{ m.details.slice(-3).join(' · ') }}</p> }
+                  <div class="streak">@for (s of [0, 1, 2, 3]; track s) { <i [class.on]="s < m.cleanStreak"></i> }<span class="tiny muted">{{ m.cleanStreak }}/4 clean</span></div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="small muted">Nothing on record.</p>
+          }
+        </div>
+        <div>
+          <h4>Fixed</h4>
+          @if (o.mistakes.resolved.length) {
+            <ul class="mm fixed">
+              @for (m of o.mistakes.resolved; track m.code) {
+                <li><app-icon name="check" /> <span>{{ m.label }}</span> <span class="tiny muted">{{ m.resolvedAt | date: 'd MMM' }}</span></li>
+              }
+            </ul>
+          } @else {
+            <p class="small muted">Habits you stop repeating move here.</p>
+          }
+        </div>
+      </div>
+    </section>
+  }
+}

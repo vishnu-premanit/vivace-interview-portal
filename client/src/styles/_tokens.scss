@@ -1,0 +1,89 @@
+// Design tokens. Light theme is "paper", dark theme is "stage".
+:root {
+  --paper: #f4efe6;
+  --paper-2: #ece5d8;
+  --surface: #fbf8f2;
+  --surface-2: #f1ebe0;
+  --ink: #1b1a17;
+  --ink-2: #3b3833;
+  --muted: #6b6458;
+  --faint: #9a9284;
+  --line: #ddd4c4;
+  --line-strong: #c7bca8;
+
+  --accent: #e0482b;          // vermilion — "vivace"
+  --accent-ink: #ffffff;
+  --accent-soft: #f9ddd3;
+  --teal: #0f5257;
+  --teal-soft: #d5e6e4;
+  --mustard: #d99a2b;
+  --mustard-soft: #f6e6c4;
+  --good: #2f7d4f;
+  --good-soft: #dcefe2;
+  --warn: #b7791f;
+  --warn-soft: #f7ead0;
+  --bad: #b83a2a;
+  --bad-soft: #f6dcd6;
+
+  --shadow-1: 0 1px 0 rgba(27, 26, 23, 0.04), 0 1px 2px rgba(27, 26, 23, 0.06);
+  --shadow-2: 0 1px 0 rgba(27, 26, 23, 0.04), 0 8px 24px -12px rgba(27, 26, 23, 0.25);
+  --shadow-3: 0 30px 60px -30px rgba(27, 26, 23, 0.45);
+
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'Instrument Sans Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --radius-s: 8px;
+  --radius: 14px;
+  --radius-l: 22px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-1: 140ms;
+  --dur-2: 260ms;
+  --dur-3: 480ms;
+
+  --gutter: clamp(16px, 4vw, 40px);
+  --maxw: 1200px;
+  color-scheme: light;
+}
+
+@mixin dark-tokens {
+  --paper: #121110;
+  --paper-2: #181614;
+  --surface: #1c1a17;
+  --surface-2: #24211d;
+  --ink: #efe8db;
+  --ink-2: #d6cebf;
+  --muted: #a59d8f;
+  --faint: #7a7367;
+  --line: #2f2b26;
+  --line-strong: #433d35;
+  --accent: #ff6a4a;
+  --accent-ink: #1b0d08;
+  --accent-soft: #3a1d15;
+  --teal: #6cc3bc;
+  --teal-soft: #15302f;
+  --mustard: #f0b955;
+  --mustard-soft: #33280f;
+  --good: #6fcf97;
+  --good-soft: #13291c;
+  --warn: #f0b955;
+  --warn-soft: #33280f;
+  --bad: #ff8a75;
+  --bad-soft: #3a1a14;
+  --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  --shadow-3: 0 30px 60px -30px rgba(0, 0, 0, 0.9);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-tokens;
+  }
+}
+:root[data-theme='dark'] {
+  @include dark-tokens;
+}

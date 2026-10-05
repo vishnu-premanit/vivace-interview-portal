@@ -1,0 +1,170 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Dashboard</span>
+    <h1>{{ greeting() }}, <em class="serif">{{ auth.firstName() }}</em>.</h1>
+    <p>
+      @if (isNew()) {
+        Your first interview sets the baseline. Everything here fills in after it.
+      } @else {
+        Here’s where you stand, and what to work on next.
+      }
+    </p>
+  </div>
+  <a routerLink="/app/new" class="btn btn-accent">New interview <app-icon name="arrow" /></a>
+</div>
+
+@if (loading()) {
+  <div class="grid grid-3">
+    @for (i of [0, 1, 2]; track i) {
+      <div class="card"><div class="skeleton" style="height: 180px"></div></div>
+    }
+  </div>
+} @else if (error()) {
+  <div class="card empty"><h3>Couldn’t load your dashboard</h3><p>{{ error() }}</p></div>
+} @else if (data(); as d) {
+  @if (isNew()) {
+    <section class="welcome card anim-rise">
+      <div>
+        <span class="section-no">START HERE</span>
+        <h2>Three steps to your first readiness score</h2>
+        <ol class="steps">
+          <li><strong>Run a short text interview.</strong> Six questions, about ten minutes.</li>
+          <li><strong>Read the report.</strong> See the points you missed and your filler heatmap.</li>
+          <li><strong>Try voice or video.</strong> Then come back — your digital twin will be waiting.</li>
+        </ol>
+      </div>
+      <div class="welcome-actions">
+        <button type="button" class="btn btn-accent btn-lg" (click)="quickStart('text')"><app-icon name="type" /> Start a text interview</button>
+        <a routerLink="/app/resume" class="btn btn-ghost">Upload my resume first</a>
+      </div>
+    </section>
+  }
+
+  <section class="grid top">
+    <article class="card readiness" style="--i:0">
+      <div class="card-title"><h3>Readiness</h3><span class="section-no">No. 01</span></div>
+      <app-gauge [value]="d.readiness.score" [label]="d.readiness.band" />
+      <ul class="breakdown">
+        @for (b of d.readiness.breakdown; track b.key) {
+          <li>
+            <span>{{ b.label }}</span>
+            <div class="bar" [class.accent]="b.value < 50"><span [style.width.%]="b.value"></span></div>
+            <span class="mono tiny">{{ b.value }}</span>
+          </li>
+        }
+      </ul>
+    </article>
+
+    <article class="card outcome" style="--i:1">
+      <div class="card-title"><h3>Outcome predictor</h3><span class="section-no">No. 02</span></div>
+      @if (d.outcome; as o) {
+        <div class="prob">
+          <span class="big"><span [appCountUp]="o.probability"></span><small>%</small></span>
+          <span class="chip" [class.chip-good]="o.probability >= 70" [class.chip-warn]="o.probability >= 40 && o.probability < 70" [class.chip-bad]="o.probability < 40">{{ o.band }}</span>
+        </div>
+        <p class="small muted">Chance of clearing a typical screening round at your current level.</p>
+        <div class="drivers">
+          @for (h of o.helping; track h.key) {
+            <div class="driver up"><app-icon name="arrow" /> {{ h.label }}</div>
+          }
+          @for (h of o.hurting; track h.key) {
+            <div class="driver down"><app-icon name="arrow" /> {{ h.label }}</div>
+          }
+        </div>
+        <p class="tiny muted disclaimer">{{ o.disclaimer }}</p>
+      } @else {
+        <div class="empty small">Finish an interview to get a prediction.</div>
+      }
+    </article>
+
+    <article class="card quick" style="--i:2">
+      <div class="card-title"><h3>Quick start</h3><span class="section-no">No. 03</span></div>
+      <div class="modes">
+        <button type="button" class="mode" (click)="quickStart('text')"><app-icon name="type" /><span><strong>Text</strong><small>Type at your own pace</small></span></button>
+        <button type="button" class="mode" (click)="quickStart('voice')"><app-icon name="mic" /><span><strong>Voice</strong><small>Speak your answers</small></span></button>
+        <button type="button" class="mode" (click)="quickStart('video')"><app-icon name="video" /><span><strong>Video</strong><small>Camera on, recorded</small></span></button>
+      </div>
+      @if (d.mistakes.active.length) {
+        <button type="button" class="btn btn-ghost btn-sm btn-block" (click)="practiseWeakness()"><app-icon name="target" /> Practise my weak areas</button>
+      }
+      <div class="totals">
+        <div class="metric"><span class="value" [appCountUp]="d.totals.completed"></span><span class="label">interviews</span></div>
+        <div class="metric"><span class="value" [appCountUp]="d.totals.answers"></span><span class="label">answers</span></div>
+        <div class="metric"><span class="value" [appCountUp]="d.totals.minutesPractised"></span><span class="label">minutes</span></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid grid-2 mid">
+    <article class="card">
+      <div class="card-title"><h3>Progress</h3><span class="tiny muted">per completed interview</span></div>
+      @if (d.trend.length >= 2) {
+        <app-line-chart [series]="trendSeries()" [labels]="trendLabels()" ariaLabel="Readiness and score per interview" />
+      } @else {
+        <div class="empty small">Two interviews and your trend line appears here.</div>
+      }
+      <div class="modes-avg">
+        @for (m of d.byMode; track m.mode) {
+          <div><app-icon [name]="modeIcon(m.mode)" /> <span class="small">{{ m.mode }}</span> <strong class="mono">{{ m.average ?? '—' }}</strong></div>
+        }
+      </div>
+    </article>
+    <article class="card">
+      <div class="card-title"><h3>Skill gap map</h3><a routerLink="/app/insights" class="small">Details</a></div>
+      <app-radar [axes]="radarAxes()" />
+      @if (d.skillGap.priorities.length) {
+        <p class="small muted center">Biggest gap: <strong>{{ d.skillGap.priorities[0].label }}</strong> ({{ d.skillGap.priorities[0].gap }} below target)</p>
+      }
+    </article>
+  </section>
+
+  <section class="grid grid-2">
+    <article class="card">
+      <div class="card-title"><h3>Mistake memory</h3><span class="tiny muted">clears after 4 clean answers</span></div>
+      @if (d.mistakes.active.length) {
+        <ul class="mistakes">
+          @for (m of d.mistakes.active.slice(0, 5); track m.code) {
+            <li>
+              <div class="spread"><strong>{{ m.label }}</strong><span class="chip chip-accent mono">×{{ m.count }}</span></div>
+              <p class="small muted">{{ m.tip }}</p>
+              <div class="streak" [attr.aria-label]="m.cleanStreak + ' of 4 clean answers'">
+                @for (s of [0, 1, 2, 3]; track s) {
+                  <i [class.on]="s < m.cleanStreak"></i>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="empty small">No recurring mistakes on record{{ d.mistakes.resolved.length ? ' — ' + d.mistakes.resolved.length + ' habits already fixed' : '' }}.</div>
+      }
+    </article>
+    <article class="card">
+      <div class="card-title"><h3>Recent interviews</h3><a routerLink="/app/reports" class="small">All reports</a></div>
+      @if (recent().length) {
+        <ul class="recent">
+          @for (r of recent(); track r.id) {
+            <li>
+              <button type="button" (click)="open(r)">
+                <app-icon [name]="modeIcon(r.mode)" />
+                <span class="r-main">
+                  <strong>{{ r.streamName }}{{ r.role ? ' · ' + r.role : '' }}</strong>
+                  <span class="tiny muted">{{ r.createdAt | date: 'd MMM, h:mm a' }} · {{ r.answered }} answers{{ r.stress ? ' · stress' : '' }}</span>
+                </span>
+                @if (r.status === 'completed') {
+                  <span class="score mono">{{ r.overall }}<small>/10</small></span>
+                } @else if (r.status === 'active') {
+                  <span class="chip chip-warn">Resume</span>
+                } @else {
+                  <span class="chip">Abandoned</span>
+                }
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="empty small">Nothing yet.</div>
+      }
+    </article>
+  </section>
+}

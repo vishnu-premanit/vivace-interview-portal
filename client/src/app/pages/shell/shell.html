@@ -1,0 +1,58 @@
+<div class="layout">
+  <aside class="sidebar" aria-label="App navigation">
+    <div class="brand"><app-logo link="/app" /></div>
+    <nav>
+      @for (n of nav; track n.path; let i = $index) {
+        <a [routerLink]="n.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!n.exact }" class="nav-item" [style.--i]="i">
+          <app-icon [name]="n.icon" />
+          <span>{{ n.label }}</span>
+        </a>
+      }
+    </nav>
+    <div class="me">
+      <div class="avatar" aria-hidden="true">{{ auth.firstName().charAt(0) }}</div>
+      <div class="who">
+        <strong>{{ auth.user()?.name }}</strong>
+        <span class="tiny muted">{{ auth.user()?.email }}</span>
+      </div>
+      <button type="button" class="icon-btn" (click)="theme.cycle()" [attr.aria-label]="'Theme: ' + theme.theme()" [title]="'Theme: ' + theme.theme()">
+        <app-icon [name]="themeIcon()" />
+      </button>
+      <button type="button" class="icon-btn" (click)="auth.logout()" aria-label="Sign out" title="Sign out"><app-icon name="logout" /></button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <app-logo link="/app" />
+    <div class="row">
+      <button type="button" class="icon-btn" (click)="theme.cycle()" [attr.aria-label]="'Theme: ' + theme.theme()"><app-icon [name]="themeIcon()" /></button>
+      <button type="button" class="icon-btn" (click)="auth.logout()" aria-label="Sign out"><app-icon name="logout" /></button>
+    </div>
+  </header>
+
+  <main id="main" class="content">
+    <router-outlet />
+  </main>
+
+  <nav class="tabbar" aria-label="App navigation">
+    @for (n of mobileNav; track n.path) {
+      <a [routerLink]="n.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!n.exact }" class="tab">
+        <app-icon [name]="n.icon" />
+        <span>{{ n.label === 'New interview' ? 'New' : n.label }}</span>
+      </a>
+    }
+    <button type="button" class="tab" [class.active]="moreOpen()" (click)="moreOpen.set(!moreOpen())" [attr.aria-expanded]="moreOpen()">
+      <app-icon name="grid" />
+      <span>More</span>
+    </button>
+  </nav>
+
+  @if (moreOpen()) {
+    <div class="sheet-backdrop" (click)="moreOpen.set(false)" aria-hidden="true"></div>
+    <div class="sheet" role="menu">
+      @for (n of moreNav; track n.path) {
+        <a [routerLink]="n.path" class="sheet-item" role="menuitem"><app-icon [name]="n.icon" />{{ n.label }}</a>
+      }
+    </div>
+  }
+</div>

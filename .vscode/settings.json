@@ -1,0 +1,9 @@
+{
+  "editor.formatOnSave": false,
+  "files.exclude": { "**/.angular": true, "**/__pycache__": true },
+  "search.exclude": { "**/node_modules": true, "**/dist": true, "**/.venv": true, "test-results": true, "playwright-report": true },
+  "python.testing.pytestEnabled": true,
+  "python.testing.cwd": "${workspaceFolder}/ml-service",
+  "python.testing.pytestArgs": ["tests"],
+  "typescript.tsdk": "client/node_modules/typescript/lib"
+}

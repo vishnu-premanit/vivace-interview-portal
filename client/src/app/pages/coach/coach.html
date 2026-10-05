@@ -1,0 +1,41 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Personal coach</span>
+    <h1>Ask the coach who’s <em class="serif">read every report</em>.</h1>
+    <p>Answers use your readiness score, digital twin, skill gaps and mistake memory — not generic advice.</p>
+  </div>
+  @if (messages().length) {
+    <button type="button" class="btn btn-quiet btn-sm" (click)="clear()"><app-icon name="trash" /> Clear</button>
+  }
+</div>
+
+<section class="chat card">
+  <div class="thread" #thread aria-live="polite">
+    @if (loading()) {
+      <div class="skeleton" style="height: 60px"></div>
+    } @else if (!messages().length) {
+      <div class="intro">
+        <div class="coach-mark" aria-hidden="true"><app-icon name="message" /></div>
+        <p>Hi {{ auth.firstName() }}. What would you like to work on?</p>
+      </div>
+    }
+    @for (m of messages(); track m.id) {
+      <div class="msg" [class.me]="m.role === 'user'" [class.coach]="m.role === 'coach'">
+        @for (p of paragraphs(m.text); track $index) { <p>{{ p }}</p> }
+      </div>
+    }
+    @if (sending()) {
+      <div class="msg coach typing" aria-label="Coach is typing"><span class="dots"><i></i><i></i><i></i></span></div>
+    }
+  </div>
+  <div class="prompts">
+    @for (p of prompts; track p) {
+      <button type="button" class="chip prompt" (click)="send(p)" [disabled]="sending()">{{ p }}</button>
+    }
+  </div>
+  <form class="composer" (ngSubmit)="send()">
+    <label class="sr-only" for="msg">Message</label>
+    <textarea id="msg" name="msg" class="textarea" rows="1" [ngModel]="draft()" (ngModelChange)="draft.set($event)" (keydown.enter)="onEnter($event)" maxlength="2000" placeholder="Ask anything about your interviews…" data-testid="coach-input"></textarea>
+    <button type="submit" class="btn btn-accent" [disabled]="sending() || !draft().trim()" aria-label="Send"><app-icon name="arrow" /></button>
+  </form>
+</section>

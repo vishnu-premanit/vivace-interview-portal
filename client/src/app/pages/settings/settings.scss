@@ -1,0 +1,7 @@
+.range { width: 100%; accent-color: var(--accent); }
+.seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); margin: 6px 0 18px; }
+.seg button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 999px; background: none; cursor: pointer; font-size: .88rem; color: var(--muted); transition: background-color var(--dur-2), color var(--dur-2); }
+.seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.lp { margin-bottom: 10px; }
+.label { font-weight: 600; color: var(--ink-2); }
+.danger { border-color: color-mix(in srgb, var(--bad) 35%, var(--line)); }

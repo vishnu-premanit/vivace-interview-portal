@@ -1,0 +1,36 @@
+.samples { margin: -4px 0 16px; align-items: center; }
+.sample { cursor: pointer; transition: border-color var(--dur-2), transform var(--dur-1); }
+.sample:hover { border-color: var(--ink); transform: translateY(-1px); }
+.versions { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; }
+.swap { margin-top: 10px; }
+.swap:hover { transform: rotate(180deg); }
+@media (max-width: 760px) { .versions { grid-template-columns: 1fr; } .swap { justify-self: center; margin: 0; } }
+.result { margin-top: 22px; display: grid; gap: 18px; }
+.verdict { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.verdict h2 { margin: 0; }
+.verdict em { color: var(--accent); }
+.scores { display: flex; gap: 8px; font-family: var(--font-mono); font-size: .85rem; }
+.sa, .sb { padding: 6px 12px; border-radius: 999px; }
+.sa { background: var(--teal-soft); color: var(--teal); }
+.sb { background: var(--accent-soft); color: var(--accent); }
+.lead { margin: 0; color: var(--ink-2); }
+.dims { display: grid; gap: 10px; }
+.dim { display: grid; grid-template-columns: 100px 1fr 44px; gap: 12px; align-items: center; animation: rise .4s var(--ease-out) both; animation-delay: calc(var(--i) * 60ms); }
+.dl { font-size: .85rem; }
+.pair { display: grid; gap: 3px; }
+.bar-a, .bar-b { height: 7px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar-a span, .bar-b span { display: block; height: 100%; border-radius: inherit; transform-origin: left; animation: grow-x .8s var(--ease-out) both; }
+.bar-a span { background: var(--teal); }
+.bar-b span { background: var(--accent); }
+.diff { text-align: right; }
+.diff.pos { color: var(--accent); }
+.diff.neg { color: var(--teal); }
+h4 { font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+.why ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .92rem; }
+.texts p { padding: 12px; border-radius: 10px; background: var(--surface-2); margin: 0; }
+.improved { padding: 16px; border-radius: 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); }
+.improved p { margin: 0; }
+.past { margin-top: 22px; }
+.past ul { list-style: none; padding: 0; margin: 0; display: grid; }
+.past li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: center; }
+@media (max-width: 560px) { .past li { grid-template-columns: 1fr; gap: 2px; } }

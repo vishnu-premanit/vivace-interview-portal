@@ -1,0 +1,20 @@
+@use 'styles/tokens';
+@use 'styles/base';
+@use 'styles/motion';
+@use 'styles/components';
+
+@media print {
+  .no-print,
+  app-ambient,
+  app-shell-nav {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .card {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
