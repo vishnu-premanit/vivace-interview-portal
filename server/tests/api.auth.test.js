@@ -9,7 +9,7 @@ describe('health & meta', () => {
   test('GET /api/health', async () => {
     const res = await request(getApp()).get('/api/health');
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: 'ok', db: 'up', ai: 'offline', ml: 'disabled' });
+    expect(res.body).toMatchObject({ status: 'ok', db: 'up', ai: 'offline', ml: 'disabled', aiStatus: { state: 'offline' } });
   });
   test('GET /api/meta lists streams, personas and languages', async () => {
     const res = await request(getApp()).get('/api/meta');

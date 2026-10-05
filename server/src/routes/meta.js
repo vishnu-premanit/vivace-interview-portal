@@ -18,9 +18,18 @@ router.get('/meta', (_req, res) => {
   });
 });
 
-router.get('/health', async (_req, res) => {
-  const mlStatus = await ml.status();
-  res.json({ status: db.isConnected() ? 'ok' : 'degraded', db: db.isConnected() ? 'up' : 'down', ai: gemini.isEnabled() ? 'gemini' : 'offline', ml: mlStatus, time: new Date().toISOString() });
+router.get('/health', async (req, res) => {
+  const deep = req.query.deep === '1';
+  const [mlStatus, aiStatus] = await Promise.all([ml.status(), gemini.status({ deep })]);
+  // "ai" stays "gemini" / "offline" for compatibility; "aiStatus" says whether Gemini calls actually succeed.
+  res.json({
+    status: db.isConnected() ? 'ok' : 'degraded',
+    db: db.isConnected() ? 'up' : 'down',
+    ai: aiStatus.state === 'offline' ? 'offline' : 'gemini',
+    aiStatus,
+    ml: mlStatus,
+    time: new Date().toISOString()
+  });
 });
 
 module.exports = { router };

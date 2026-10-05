@@ -82,3 +82,23 @@ test('malformed Gemini scores are ignored', async () => {
   const e = await interviewer.evaluate({ turn, answer: 'Caching stores responses.', metrics: {}, session });
   expect(e.source).toBe('offline');
 });
+
+test('health status reports a failing key with the provider error, without leaking the key', async () => {
+  mockGenerate.mockRejectedValue(new Error('API key not valid. Please pass a valid API key. (AIzaSyFAKEFAKEFAKEFAKE123)'));
+  const s = await gemini.status({ deep: true });
+  expect(s.state).toBe('failing');
+  expect(s.lastError.message).toMatch(/API key not valid/);
+  expect(s.lastError.message).not.toMatch(/AIzaSyFAKE/);
+  // cached: a second deep check within 30 s does not call Gemini again
+  const calls = mockGenerate.mock.calls.length;
+  await gemini.status({ deep: true });
+  expect(mockGenerate.mock.calls.length).toBe(calls);
+});
+
+test('health status reports working after a successful call', async () => {
+  mockGenerate.mockResolvedValue({ text: 'ok' });
+  const s = await gemini.status({ deep: true });
+  expect(s.state).toBe('working');
+  expect(s.reply).toBe('ok');
+  expect((await gemini.status()).state).toBe('working');
+});

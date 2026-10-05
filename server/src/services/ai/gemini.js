@@ -10,6 +10,20 @@ const env = require('../../config/env');
 let client = null;
 let failures = 0;
 let openUntil = 0;
+let lastError = null; // { message, at } — surfaced on /api/health so a bad key is easy to spot
+let lastOkAt = null;
+let lastDeep = null;
+
+function cleanError(err) {
+  const raw = err && err.message ? String(err.message) : String(err);
+  // Never echo anything that looks like a key back out.
+  return raw.replace(/AIza[0-9A-Za-z_-]{10,}|AQ\.[0-9A-Za-z_.-]{20,}/g, '[key]').slice(0, 300);
+}
+
+function markOk() {
+  failures = 0;
+  lastOkAt = new Date().toISOString();
+}
 
 function getClient() {
   if (!env.geminiKey) return null;
@@ -26,6 +40,7 @@ function isEnabled() {
 
 function recordFailure(err) {
   failures += 1;
+  lastError = { message: cleanError(err), at: new Date().toISOString() };
   if (!env.isTest) console.warn('[gemini] call failed:', err && err.message ? err.message.slice(0, 200) : err);
   if (failures >= 3) {
     openUntil = Date.now() + 60_000; // circuit breaker: back off for a minute
@@ -76,7 +91,7 @@ async function generateJson({ system, prompt, temperature = 0.6, timeoutMs = 120
     );
     const data = extractJson(res.text);
     if (!data) throw new Error('Gemini returned non-JSON output');
-    failures = 0;
+    markOk();
     return data;
   } catch (err) {
     recordFailure(err);
@@ -96,7 +111,7 @@ async function generateText({ system, prompt, history = [], temperature = 0.7, t
       ai.models.generateContent({ model: env.geminiModel, contents, config: { systemInstruction: system, temperature, maxOutputTokens: 1024 } }),
       timeoutMs
     );
-    failures = 0;
+    markOk();
     return res.text ? String(res.text).trim() : null;
   } catch (err) {
     recordFailure(err);
@@ -124,7 +139,7 @@ async function transcribe(buffer, mimeType, language = 'en') {
       }),
       30000
     );
-    failures = 0;
+    markOk();
     return res.text ? String(res.text).trim() : null;
   } catch (err) {
     recordFailure(err);
@@ -132,11 +147,40 @@ async function transcribe(buffer, mimeType, language = 'en') {
   }
 }
 
+/** Status for /api/health. With deep=true, makes one tiny real call to prove the key and model work. */
+async function status({ deep = false } = {}) {
+  if (!env.geminiKey) return { state: 'offline', model: null };
+  const base = { model: env.geminiModel, lastOkAt, lastError };
+  // The deep check is public, so cache it: at most one real Gemini call every 30 seconds.
+  if (deep && lastDeep && Date.now() - lastDeep.at < 30_000) return lastDeep.result;
+  if (deep) {
+    const remember = (result) => {
+      lastDeep = { at: Date.now(), result };
+      return result;
+    };
+    try {
+      const ai = getClient();
+      const res = await withTimeout(ai.models.generateContent({ model: env.geminiModel, contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: ok' }] }], config: { temperature: 0, maxOutputTokens: 5 } }), 15000);
+      markOk();
+      return remember({ ...base, state: 'working', lastOkAt, reply: String(res.text || '').trim().slice(0, 20) });
+    } catch (err) {
+      recordFailure(err);
+      return remember({ ...base, state: 'failing', lastError });
+    }
+  }
+  if (Date.now() < openUntil) return { ...base, state: 'failing' };
+  if (lastError && (!lastOkAt || lastError.at > lastOkAt)) return { ...base, state: 'failing' };
+  return { ...base, state: lastOkAt ? 'working' : 'configured' };
+}
+
 // Test hook
 function _reset() {
   client = null;
   failures = 0;
   openUntil = 0;
+  lastError = null;
+  lastOkAt = null;
+  lastDeep = null;
 }
 
-module.exports = { generateJson, generateText, transcribe, isEnabled, extractJson, _reset };
+module.exports = { generateJson, generateText, transcribe, isEnabled, extractJson, status, _reset };
