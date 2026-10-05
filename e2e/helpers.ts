@@ -72,6 +72,9 @@ export async function completeInterview(page: Page, opts: { voice?: boolean; ans
     await expect(box.or(done).or(next).first()).toBeVisible({ timeout: 30_000 });
     if (await next.isVisible()) {
       await next.click();
+      // The click returns before Angular re-renders; without this the next pass can still see the
+      // old "Next" button and take the wrong branch (double click, or wait for a box voice mode never shows).
+      await expect(next).toBeHidden();
       continue;
     }
     if (opts.voice && (await done.isVisible())) {
