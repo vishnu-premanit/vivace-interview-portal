@@ -16,6 +16,9 @@ export async function registerViaApi(page: Page, stream = 'bsc-it') {
 
 /** Make TTS instant and give the page a scripted speech recogniser (headless Chrome has no speech service). */
 export async function fakeSpeech(page: Page, transcript = STORY) {
+  // Server-side transcription (used on Android, where the page's recorder holds the mic) needs Gemini;
+  // the test server runs offline, so answer it with the same scripted transcript.
+  await page.route('**/api/interviews/*/transcribe', (route) => route.fulfill({ json: { text: transcript } }));
   await page.addInitScript((text: string) => {
     const synth = {
       speaking: false,
@@ -69,10 +72,15 @@ export async function completeInterview(page: Page, opts: { voice?: boolean; ans
     await expect(box.or(done).or(next).first()).toBeVisible({ timeout: 30_000 });
     if (await next.isVisible()) {
       await next.click();
+      // The click returns before Angular re-renders; without this the next pass can still see the
+      // old "Next" button and take the wrong branch (double click, or wait for a box voice mode never shows).
+      await expect(next).toBeHidden();
       continue;
     }
     if (opts.voice && (await done.isVisible())) {
-      await expect(page.locator('.transcript')).toContainText('canteen', { timeout: 10_000 });
+      // Live transcript on desktop; on Android the answer is recorded and transcribed after "Done".
+      await expect(page.locator('.transcript')).toContainText(/canteen|Recording your answer/, { timeout: 10_000 });
+      if (await page.locator('.transcript', { hasText: 'Recording your answer' }).isVisible()) await page.waitForTimeout(800);
       await done.click();
     } else {
       await box.fill(answer);

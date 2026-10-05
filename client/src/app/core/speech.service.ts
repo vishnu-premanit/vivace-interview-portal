@@ -42,6 +42,7 @@ export class SpeechService {
   private recognition: Recognition | null = null;
   private wantListening = false;
   private onFirstWord: (() => void) | null = null;
+  private onUnavailable: (() => void) | null = null;
   private heardSomething = false;
 
   get ttsSupported(): boolean {
@@ -50,6 +51,15 @@ export class SpeechService {
 
   get sttSupported(): boolean {
     return Boolean(this.ctor());
+  }
+
+  /**
+   * On Android, Chrome's SpeechRecognition runs in the Google app and cannot use the
+   * microphone while the page itself holds it (getUserMedia for the waveform/recording),
+   * so the room must use server-side transcription there instead.
+   */
+  get conflictsWithPageMic(): boolean {
+    return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
   }
 
   private ctor(): RecognitionCtor | null {
@@ -97,7 +107,7 @@ export class SpeechService {
     this.speaking.set(false);
   }
 
-  startListening(lang: string, onFirstWord?: () => void): boolean {
+  startListening(lang: string, onFirstWord?: () => void, onUnavailable?: () => void): boolean {
     const Ctor = this.ctor();
     if (!Ctor) return false;
     this.stopListening();
@@ -105,6 +115,7 @@ export class SpeechService {
     this.interimText.set('');
     this.error.set(null);
     this.onFirstWord = onFirstWord ?? null;
+    this.onUnavailable = onUnavailable ?? null;
     this.heardSomething = false;
     this.wantListening = true;
     const rec = new Ctor();
@@ -128,6 +139,15 @@ export class SpeechService {
     };
     rec.onerror = (e) => {
       if (e.error === 'no-speech' || e.error === 'aborted') return;
+      if ((e.error === 'audio-capture' || e.error === 'service-not-allowed') && this.onUnavailable) {
+        // The microphone is busy (e.g. held by the page's recorder): hand over to the caller's fallback.
+        const fallback = this.onUnavailable;
+        this.onUnavailable = null;
+        this.wantListening = false;
+        this.listening.set(false);
+        fallback();
+        return;
+      }
       this.error.set(e.error === 'not-allowed' ? 'Microphone permission was denied.' : e.error === 'network' ? 'Speech recognition needs an internet connection in this browser.' : `Speech recognition error: ${e.error}`);
       if (e.error === 'not-allowed' || e.error === 'network' || e.error === 'service-not-allowed') this.wantListening = false;
     };

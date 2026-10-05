@@ -45,12 +45,13 @@
   &:hover::after {
     opacity: 1;
   }
+  // Hover lifts with shadow only: moving the box would slide it out from under a cursor
+  // resting on its edge, which then flips hover off and on forever (visible flicker).
   &:hover {
-    transform: translateY(-1px);
     box-shadow: var(--shadow-2);
   }
   &:active {
-    transform: translateY(0) scale(0.97);
+    transform: scale(0.97);
     transition-duration: 60ms;
   }
   &[disabled],

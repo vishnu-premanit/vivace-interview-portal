@@ -50,7 +50,7 @@ Collections (`users`, `interviews`, `mistakes`, `coachmessages`, `abtests`) and 
    { "status": "ok", "db": "up", "ai": "gemini", "ml": "up" }
    ```
 
-   `ai` is `offline` without a Gemini key; `ml` is `disabled`/`down` if you skipped the ML service.
+   `ai` is `offline` without a Gemini key; `ml` is `disabled`/`down` if you skipped the ML service, and `waking` for up to a minute while a sleeping free-plan ML service starts (the portal wakes it in the background on start-up and whenever it is found asleep).
 6. Open the root URL, create an account, and run a short text interview to confirm everything end to end.
 
 > **Don't want the ML service?** Delete the `vivace-ml` block and the `ML_SERVICE_URL` entry from `render.yaml` before applying (or remove the service later and clear the variable). The portal falls back to its JavaScript engines.
@@ -106,7 +106,7 @@ Everything on one machine (MongoDB included): `docker compose up --build`.
 | `/api/health` shows `"db": "down"` / `MongoServerSelectionError` | Atlas *Network Access* must allow `0.0.0.0/0`; check the user/password and URL-encoding. |
 | Build fails at `ng build` with "command not found" | Use `npm run render-build` (it installs the client's dev dependencies, which include the Angular CLI). |
 | `"ai": "offline"` although a key is set | The key is invalid or quota is exhausted; check the logs for `[gemini]` warnings. The breaker retries after 60 s. |
-| `"ml": "down"` | The ML service is asleep or failed to build; open its URL `/health`. The portal still works. |
+| `"ml": "down"` or `"waking"` | `waking` is normal on the free plan: the portal is waking the sleeping ML service, which takes 30–60 s. If it stays `down`, the service failed to build; open its URL `/health`. The portal still works on its JS engines meanwhile. |
 | Camera/mic prompt never appears | Use HTTPS, allow permissions in the address bar, and close other apps using the camera. |
 | Voice answers don't transcribe in Firefox/Safari | Those browsers lack Web Speech recognition. Add a Gemini key for server transcription, or use *Type instead*. |
 | Logged out immediately after login | You're on `http://` in production (Secure cookie dropped). Use the HTTPS URL. |

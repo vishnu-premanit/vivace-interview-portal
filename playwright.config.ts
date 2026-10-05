@@ -14,6 +14,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
+    // A stuck click should fail with Playwright's reason (not stable, covered, …), not eat the test timeout.
+    actionTimeout: 20_000,
     screenshot: 'only-on-failure',
     permissions: ['camera', 'microphone'],
     launchOptions: { args: media }

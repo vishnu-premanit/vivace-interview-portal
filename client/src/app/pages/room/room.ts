@@ -229,12 +229,15 @@ export class Room implements OnInit, OnDestroy {
       setTimeout(() => this.answerBox()?.nativeElement.focus({ preventScroll: true }), 50);
     } else if (this.isVoice()) {
       this.media()?.measure(true);
-      const ok = this.speech.startListening(iv.language.speech, () => this.markFirstInput());
-      if (!ok) {
-        // No browser STT: record this answer and transcribe on the server (or let the user type).
+      const useServerStt = () => {
+        // No usable browser STT: record this answer and transcribe on the server (or let the user type).
+        if (this.sttFallback()) return;
+        this.speech.stopListening();
         this.sttFallback.set(true);
         this.media()?.startAnswerAudio();
-      }
+      };
+      const ok = !this.speech.conflictsWithPageMic && this.speech.startListening(iv.language.speech, () => this.markFirstInput(), useServerStt);
+      if (!ok) useServerStt();
     } else {
       setTimeout(() => this.answerBox()?.nativeElement.focus({ preventScroll: true }), 50);
     }
@@ -254,6 +257,8 @@ export class Room implements OnInit, OnDestroy {
     this.tick = setInterval(() => {
       const secs = Math.floor((performance.now() - this.questionShownAt) / 1000);
       this.elapsed.set(secs);
+      // Recording for server transcription: no live words, so use the mic level to time the first word.
+      if (this.sttFallback() && !this.firstInputAt && this.phase() === 'answering' && this.level() > 0.12) this.markFirstInput();
       const lim = this.limit();
       if (!lim || this.phase() !== 'answering') return;
       if (this.interview()?.stress && !this.interruptedThisTurn && secs >= lim * 0.65 && this.firstInputAt) {
@@ -300,7 +305,8 @@ export class Room implements OnInit, OnDestroy {
           const res = await this.api.upload<{ text: string }>(`/interviews/${this.interview()!.id}/transcribe`, 'audio', clip, 'answer.webm');
           text = res.text || '';
         } catch (err) {
-          if (!(err instanceof HttpErrorResponse && err.status === 503)) this.toast.bad(errorMessage(err));
+          if (err instanceof HttpErrorResponse && err.status === 503) this.toast.show('Voice-to-text is not available on this device right now. Please type your answer.');
+          else this.toast.bad(errorMessage(err));
         } finally {
           this.transcribing.set(false);
         }
@@ -317,6 +323,7 @@ export class Room implements OnInit, OnDestroy {
   async rerecord(): Promise<void> {
     this.answer.set('');
     this.typing.set(false);
+    this.sttFallback.set(false);
     this.openAnswerWindow();
   }
 
