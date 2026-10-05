@@ -28,7 +28,7 @@ module.exports = {
   jwtSecret,
   jwtExpires: process.env.JWT_EXPIRES || '2d',
   geminiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   mlServiceUrl: (process.env.ML_SERVICE_URL || '').replace(/\/$/, ''),
   clientDist: process.env.CLIENT_DIST || path.resolve(__dirname, '../../../client/dist/client/browser'),
   corsOrigin: process.env.CORS_ORIGIN || '',

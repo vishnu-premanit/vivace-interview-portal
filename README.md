@@ -122,7 +122,7 @@ Copy `.env.example` to `.env` in the repo root.
 | `JWT_SECRET` | in production | dev-only value | ≥ 32 characters. The server refuses to start in production without it. |
 | `JWT_EXPIRES` | no | `2d` | Session length. |
 | `GEMINI_API_KEY` | no | — | Enables Gemini. Get one at https://aistudio.google.com/apikey |
-| `GEMINI_MODEL` | no | `gemini-2.5-flash` | Any Gemini model that supports JSON output and audio input. |
+| `GEMINI_MODEL` | no | `gemini-3.8-flash` | Any Gemini model that supports JSON output and audio input. |
 | `ML_SERVICE_URL` | no | — | e.g. `https://vivace-ml.onrender.com` |
 | `PORT` | no | `8080` | Render sets this automatically. |
 | `MAX_UPLOAD_MB` | no | `40` | Max recording upload size. |
