@@ -1,0 +1,100 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Setup: install everything",
+      "detail": "npm packages for root, server and client (needs internet once)",
+      "type": "shell",
+      "command": "npm install; npm run install:all",
+      "windows": { "command": "npm install; npm run install:all" },
+      "problemMatcher": []
+    },
+    {
+      "label": "2. Setup: ML service venv",
+      "detail": "Creates ml-service/.venv and installs Python packages (optional)",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "command": "python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt",
+      "windows": { "command": "python -m venv .venv; .venv\\Scripts\\pip install -r requirements-dev.txt" },
+      "problemMatcher": []
+    },
+    {
+      "label": "3. Build client",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: portal (offline)",
+      "detail": "http://localhost:8080 — in-memory MongoDB, offline AI engines unless .env says otherwise",
+      "type": "shell",
+      "command": "npm start",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activesBegin": true, "beginsPattern": ".", "endsPattern": "listening on" } }
+    },
+    {
+      "label": "Run: ML service",
+      "detail": "FastAPI on http://127.0.0.1:8001",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "command": ".venv/bin/python -m uvicorn app.main:app --port 8001",
+      "windows": { "command": ".venv\\Scripts\\python -m uvicorn app.main:app --port 8001" },
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activesBegin": true, "beginsPattern": ".", "endsPattern": "Application startup complete" } }
+    },
+    {
+      "label": "Run: portal + ML service",
+      "detail": "Starts the ML service, then the portal pointed at it",
+      "dependsOn": ["Run: ML service", "Run: portal (with ML)"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: portal (with ML)",
+      "type": "shell",
+      "command": "npm start",
+      "options": { "env": { "ML_SERVICE_URL": "http://127.0.0.1:8001" } },
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activesBegin": true, "beginsPattern": ".", "endsPattern": "listening on" } }
+    },
+    {
+      "label": "Dev: API (watch)",
+      "type": "shell",
+      "command": "npm run dev:server",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activesBegin": true, "beginsPattern": ".", "endsPattern": "listening on" } }
+    },
+    {
+      "label": "Dev: Angular (live reload)",
+      "detail": "http://localhost:4200 — proxies /api to :8080",
+      "type": "shell",
+      "command": "npm run dev:client",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activesBegin": true, "beginsPattern": ".", "endsPattern": "Local:|localhost:4200" } }
+    },
+    {
+      "label": "Dev: API + Angular",
+      "dependsOn": ["Dev: API (watch)", "Dev: Angular (live reload)"],
+      "problemMatcher": []
+    },
+    { "label": "Test: server", "type": "shell", "command": "npm run test:server", "group": "test", "problemMatcher": [] },
+    { "label": "Test: client", "type": "shell", "command": "npm run test:client", "group": "test", "problemMatcher": [] },
+    {
+      "label": "Test: ML service",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "command": ".venv/bin/python -m pytest -q",
+      "windows": { "command": ".venv\\Scripts\\python -m pytest -q" },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: E2E (Playwright)",
+      "type": "shell",
+      "command": "npx playwright install chromium; npm run build; npm run test:e2e",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
