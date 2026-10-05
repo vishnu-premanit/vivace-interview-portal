@@ -48,6 +48,47 @@ function recordFailure(err) {
   }
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function errorCode(err) {
+  const text = `${err && err.status ? err.status : ''} ${err && err.message ? err.message : ''}`;
+  if (/\b(503|UNAVAILABLE|overloaded|high demand)\b/i.test(text)) return 'busy';
+  if (/\b(429|RESOURCE_EXHAUSTED|rate limit|quota)\b/i.test(text)) return 'busy';
+  if (/\b(404|NOT_FOUND|no longer available|is not found)\b/i.test(text)) return 'missing-model';
+  return 'other';
+}
+
+/** Primary model first, then any GEMINI_FALLBACK_MODELS (comma separated). */
+function modelChain() {
+  return [env.geminiModel, ...env.geminiFallbackModels].filter((m, i, a) => m && a.indexOf(m) === i);
+}
+
+/**
+ * Call Gemini with short retries when the model is busy (503/429) and fall through
+ * to the next model in the chain if it is busy or no longer offered — all within
+ * one overall deadline so an interview never waits longer than timeoutMs.
+ */
+async function callModel(buildRequest, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastErr = null;
+  for (const model of modelChain()) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const left = deadline - Date.now();
+      if (left < 800) throw lastErr || new Error(`Gemini timeout after ${timeoutMs}ms`);
+      try {
+        return await withTimeout(getClient().models.generateContent(buildRequest(model)), left);
+      } catch (err) {
+        lastErr = err;
+        const code = errorCode(err);
+        if (code === 'missing-model') break; // try the next model
+        if (code !== 'busy') throw err;
+        if (attempt < 2) await sleep(Math.min(400 * 2 ** attempt, Math.max(0, deadline - Date.now() - 800)));
+      }
+    }
+  }
+  throw lastErr || new Error('No Gemini model available');
+}
+
 function withTimeout(promise, ms) {
   let timer;
   return Promise.race([
@@ -80,12 +121,11 @@ function extractJson(text) {
 async function generateJson({ system, prompt, temperature = 0.6, timeoutMs = 12000 }) {
   if (!isEnabled()) return null;
   try {
-    const ai = getClient();
-    const res = await withTimeout(
-      ai.models.generateContent({
-        model: env.geminiModel,
+    const res = await callModel(
+      (model) => ({
+        model,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { systemInstruction: system, temperature, responseMimeType: 'application/json', maxOutputTokens: 2048 }
+        config: { systemInstruction: system, temperature, responseMimeType: 'application/json', maxOutputTokens: 4096 }
       }),
       timeoutMs
     );
@@ -102,15 +142,11 @@ async function generateJson({ system, prompt, temperature = 0.6, timeoutMs = 120
 async function generateText({ system, prompt, history = [], temperature = 0.7, timeoutMs = 15000 }) {
   if (!isEnabled()) return null;
   try {
-    const ai = getClient();
     const contents = [
       ...history.map((h) => ({ role: h.role === 'coach' ? 'model' : 'user', parts: [{ text: h.text }] })),
       { role: 'user', parts: [{ text: prompt }] }
     ];
-    const res = await withTimeout(
-      ai.models.generateContent({ model: env.geminiModel, contents, config: { systemInstruction: system, temperature, maxOutputTokens: 1024 } }),
-      timeoutMs
-    );
+    const res = await callModel((model) => ({ model, contents, config: { systemInstruction: system, temperature, maxOutputTokens: 2048 } }), timeoutMs);
     markOk();
     return res.text ? String(res.text).trim() : null;
   } catch (err) {
@@ -122,10 +158,9 @@ async function generateText({ system, prompt, history = [], temperature = 0.7, t
 async function transcribe(buffer, mimeType, language = 'en') {
   if (!isEnabled() || !buffer || !buffer.length) return null;
   try {
-    const ai = getClient();
-    const res = await withTimeout(
-      ai.models.generateContent({
-        model: env.geminiModel,
+    const res = await callModel(
+      (model) => ({
+        model,
         contents: [
           {
             role: 'user',
@@ -159,8 +194,8 @@ async function status({ deep = false } = {}) {
       return result;
     };
     try {
-      const ai = getClient();
-      const res = await withTimeout(ai.models.generateContent({ model: env.geminiModel, contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: ok' }] }], config: { temperature: 0, maxOutputTokens: 5 } }), 15000);
+      // Generous token budget: "thinking" models spend tokens before they answer.
+      const res = await callModel((model) => ({ model, contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: ok' }] }], config: { temperature: 0, maxOutputTokens: 256 } }), 15000);
       markOk();
       return remember({ ...base, state: 'working', lastOkAt, reply: String(res.text || '').trim().slice(0, 20) });
     } catch (err) {
