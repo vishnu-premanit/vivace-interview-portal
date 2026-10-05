@@ -108,3 +108,26 @@ test.describe('voice and video interviews', () => {
     await expect(page.getByTestId('submit').or(page.getByTestId('feedback')).first()).toBeVisible();
   });
 });
+
+test.describe('Android phones', () => {
+  // Chrome on Android cannot run speech recognition while the page holds the microphone.
+  test.use({ userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36' });
+
+  test('video answers are recorded and transcribed on the server instead of live', async ({ page }) => {
+    await fakeSpeech(page);
+    await registerViaApi(page, 'bsc-it');
+    await page.goto('/app/new');
+    await page.getByRole('radio', { name: /Video/ }).click();
+    await page.getByLabel(/Questions:/).fill('3');
+    await page.getByRole('button', { name: /Enter the room/ }).click();
+    await page.getByRole('button', { name: /begin/ }).click();
+    await expect(page.locator('.transcript')).toContainText('Recording your answer', { timeout: 30_000 });
+    await page.waitForTimeout(800);
+    const upload = page.waitForRequest((r) => r.url().includes('/transcribe') && r.method() === 'POST');
+    await page.getByTestId('done').click();
+    await upload;
+    await expect(page.getByTestId('answer')).toHaveValue(/canteen/);
+    await page.getByTestId('submit').click();
+    await expect(page.getByTestId('next').or(page.getByTestId('feedback')).first()).toBeVisible({ timeout: 30_000 });
+  });
+});
