@@ -102,3 +102,33 @@ test('health status reports working after a successful call', async () => {
   expect(s.reply).toBe('ok');
   expect((await gemini.status()).state).toBe('working');
 });
+
+test('busy (503) responses are retried and then succeed', async () => {
+  mockGenerate
+    .mockRejectedValueOnce(Object.assign(new Error('{"error":{"code":503,"status":"UNAVAILABLE","message":"high demand"}}'), { status: 503 }))
+    .mockResolvedValueOnce({ text: JSON.stringify({ text: 'Tell me about a bug you fixed recently.', competency: 'problemSolving', type: 'behavioral', keyPoints: ['bug', 'fix', 'result'] }) });
+  const q = await interviewer.nextQuestion(session, { history: [], mistakes: [] });
+  expect(q.source).toBe('gemini');
+  expect(mockGenerate).toHaveBeenCalledTimes(2);
+});
+
+test('a retired model falls through to the next model in GEMINI_FALLBACK_MODELS', async () => {
+  let g;
+  process.env.GEMINI_FALLBACK_MODELS = 'backup-model';
+  jest.isolateModules(() => {
+    g = require('../src/services/ai/gemini');
+  });
+  process.env.GEMINI_FALLBACK_MODELS = '';
+  mockGenerate.mockImplementation(async ({ model }) => {
+    if (model !== 'backup-model') throw new Error('404 NOT_FOUND: model is no longer available');
+    return { text: '{"ok":true}' };
+  });
+  expect(await g.generateJson({ system: 's', prompt: 'p' })).toEqual({ ok: true });
+  expect(mockGenerate.mock.calls.map((c) => c[0].model)).toEqual([expect.any(String), 'backup-model']);
+});
+
+test('non-retryable errors fail fast', async () => {
+  mockGenerate.mockRejectedValue(new Error('400 API key not valid'));
+  expect(await gemini.generateJson({ system: 's', prompt: 'p' })).toBeNull();
+  expect(mockGenerate).toHaveBeenCalledTimes(1);
+});

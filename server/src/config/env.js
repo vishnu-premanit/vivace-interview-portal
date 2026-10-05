@@ -29,6 +29,8 @@ module.exports = {
   jwtExpires: process.env.JWT_EXPIRES || '2d',
   geminiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+  // Tried in order when the main model is overloaded (503/429) or no longer offered.
+  geminiFallbackModels: (process.env.GEMINI_FALLBACK_MODELS || '').split(',').map((s) => s.trim()).filter(Boolean),
   mlServiceUrl: (process.env.ML_SERVICE_URL || '').replace(/\/$/, ''),
   clientDist: process.env.CLIENT_DIST || path.resolve(__dirname, '../../../client/dist/client/browser'),
   corsOrigin: process.env.CORS_ORIGIN || '',
