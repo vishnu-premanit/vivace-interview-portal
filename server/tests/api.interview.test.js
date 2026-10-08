@@ -95,6 +95,19 @@ describe('interview lifecycle (text)', () => {
     expect(skip.body.next.kind).toBe('main');
   });
 
+  test('the report says offline engines when Gemini was configured but every evaluation fell back', async () => {
+    const Interview = require('../src/models/Interview');
+    const { agent } = await registerAgent();
+    const create = await agent.post('/api/interviews').send({ mode: 'text', stream: 'bsc-it', questionCount: 3 });
+    const id = create.body.interview.id;
+    // Simulate an interview that started while a (broken) Gemini key was configured.
+    await Interview.updateOne({ _id: id }, { $set: { aiSource: 'gemini' } });
+    await agent.post(`/api/interviews/${id}/answer`).send({ answer: GOOD_ANSWER, thinkTimeMs: 3000, answerDurationMs: 40000 });
+    const finish = await agent.post(`/api/interviews/${id}/finish`);
+    expect(finish.status).toBe(200);
+    expect(finish.body.interview.aiSource).toBe('offline');
+  });
+
   test('finishing with no answers marks it abandoned', async () => {
     const { agent } = await registerAgent();
     const create = await agent.post('/api/interviews').send({ mode: 'text', stream: 'ba', questionCount: 3 });

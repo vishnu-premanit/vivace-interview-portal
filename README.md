@@ -123,7 +123,7 @@ Copy `.env.example` to `.env` in the repo root.
 | `JWT_EXPIRES` | no | `2d` | Session length. |
 | `GEMINI_API_KEY` | no | — | Enables Gemini. Get one at https://aistudio.google.com/apikey |
 | `GEMINI_MODEL` | no | `gemini-flash-latest` | Any Gemini model that supports JSON output and audio input. |
-| `GEMINI_FALLBACK_MODELS` | no | `gemini-flash-lite-latest` | Comma-separated backup models. Busy (503/429) calls are retried briefly, then the next model is tried. |
+| `GEMINI_FALLBACK_MODELS` | no | `gemini-flash-lite-latest` | Comma-separated backup models. Busy (503) calls are retried briefly; on quota/rate limits (429), a slow response or a retired model (404) the next model is tried. |
 | `ML_SERVICE_URL` | no | — | e.g. `https://vivace-ml.onrender.com` |
 | `PORT` | no | `8080` | Render sets this automatically. |
 | `MAX_UPLOAD_MB` | no | `40` | Max recording upload size. |
