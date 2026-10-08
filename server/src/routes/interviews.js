@@ -398,6 +398,9 @@ router.post(
     const user = await User.findById(req.user._id);
     const { turns: historyTurns } = await answeredTurns(user._id, { excludeId: session._id });
     session.report = await buildReport(session, { user, historyTurns, samples: session.presentationSamples || [] });
+    // Label the report by what actually scored the answers: Gemini may have been configured at the
+    // start but failed (bad key, quota, outage), in which case the offline engines did the work.
+    session.aiSource = answered.some((t) => t.evaluation.source === 'gemini') ? 'gemini' : 'offline';
     session.presentation = session.report.presentation;
     session.status = 'completed';
     session.completedAt = new Date();
