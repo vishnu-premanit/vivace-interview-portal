@@ -17,7 +17,7 @@ let lastDeep = null;
 function cleanError(err) {
   const raw = err && err.message ? String(err.message) : String(err);
   // Never echo anything that looks like a key back out.
-  return raw.replace(/AIza[0-9A-Za-z_-]{10,}|AQ\.[0-9A-Za-z_.-]{20,}/g, '[key]').slice(0, 300);
+  return raw.replace(/AIza[0-9A-Za-z_-]{10,}|AQ\.[0-9A-Za-z_.-]{20,}/g, '[key]').slice(0, 500);
 }
 
 function markOk() {
@@ -52,8 +52,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function errorCode(err) {
   const text = `${err && err.status ? err.status : ''} ${err && err.message ? err.message : ''}`;
+  if (/Gemini timeout after/.test(text)) return 'slow';
+  // Quota and rate limits are per model, so retrying the same model is pointless: use the next one.
+  if (/\b(429|RESOURCE_EXHAUSTED|rate limit|quota)\b/i.test(text)) return 'quota';
   if (/\b(503|UNAVAILABLE|overloaded|high demand)\b/i.test(text)) return 'busy';
-  if (/\b(429|RESOURCE_EXHAUSTED|rate limit|quota)\b/i.test(text)) return 'busy';
+  if (/\b(fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up)\b/i.test(text)) return 'busy';
   if (/\b(404|NOT_FOUND|no longer available|is not found)\b/i.test(text)) return 'missing-model';
   return 'other';
 }
@@ -63,30 +66,49 @@ function modelChain() {
   return [env.geminiModel, ...env.geminiFallbackModels].filter((m, i, a) => m && a.indexOf(m) === i);
 }
 
+function shortError(err) {
+  const text = cleanError(err);
+  const m = text.match(/"message"\s*:\s*"([^"]{1,160})/);
+  return (m ? `${err.status || ''} ${m[1]}` : text).trim().slice(0, 160);
+}
+
 /**
- * Call Gemini with short retries when the model is busy (503/429) and fall through
- * to the next model in the chain if it is busy or no longer offered — all within
- * one overall deadline so an interview never waits longer than timeoutMs.
+ * Call Gemini within one overall deadline so an interview never waits longer than timeoutMs:
+ * - busy (503) → short retries on the same model;
+ * - quota/rate limit (429), too slow, or model retired (404) → move on to the next model;
+ * - anything else (e.g. an invalid key) → fail fast.
+ * A model that is not the last one only gets part of the remaining time, so a slow or
+ * hanging primary model still leaves room for the backup model to answer.
  */
 async function callModel(buildRequest, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
+  const chain = modelChain();
+  const tried = [];
   let lastErr = null;
-  for (const model of modelChain()) {
+  for (let m = 0; m < chain.length; m++) {
+    const model = chain[m];
+    const isLast = m === chain.length - 1;
     for (let attempt = 0; attempt < 3; attempt++) {
       const left = deadline - Date.now();
-      if (left < 800) throw lastErr || new Error(`Gemini timeout after ${timeoutMs}ms`);
+      if (left < 800) break;
+      const budget = isLast ? left : Math.round(left * 0.6);
       try {
-        return await withTimeout(getClient().models.generateContent(buildRequest(model)), left);
+        return await withTimeout(getClient().models.generateContent(buildRequest(model)), budget);
       } catch (err) {
         lastErr = err;
+        tried.push(`${model}: ${shortError(err)}`);
         const code = errorCode(err);
-        if (code === 'missing-model') break; // try the next model
+        if (code === 'missing-model' || code === 'quota' || code === 'slow') break; // try the next model
         if (code !== 'busy') throw err;
         if (attempt < 2) await sleep(Math.min(400 * 2 ** attempt, Math.max(0, deadline - Date.now() - 800)));
       }
     }
   }
-  throw lastErr || new Error('No Gemini model available');
+  if (!lastErr) throw new Error(`Gemini timeout after ${timeoutMs}ms`);
+  // Name every model's failure so /api/health shows the real cause, not just the last symptom.
+  const summary = new Error(`All Gemini models failed — ${tried.join(' | ')}`);
+  summary.status = lastErr.status;
+  throw summary;
 }
 
 function withTimeout(promise, ms) {
@@ -185,7 +207,7 @@ async function transcribe(buffer, mimeType, language = 'en') {
 /** Status for /api/health. With deep=true, makes one tiny real call to prove the key and model work. */
 async function status({ deep = false } = {}) {
   if (!env.geminiKey) return { state: 'offline', model: null };
-  const base = { model: env.geminiModel, lastOkAt, lastError };
+  const base = { model: env.geminiModel, fallbackModels: env.geminiFallbackModels, lastOkAt, lastError };
   // The deep check is public, so cache it: at most one real Gemini call every 30 seconds.
   if (deep && lastDeep && Date.now() - lastDeep.at < 30_000) return lastDeep.result;
   if (deep) {

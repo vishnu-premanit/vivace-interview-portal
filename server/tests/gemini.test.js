@@ -132,3 +132,46 @@ test('non-retryable errors fail fast', async () => {
   expect(await gemini.generateJson({ system: 's', prompt: 'p' })).toBeNull();
   expect(mockGenerate).toHaveBeenCalledTimes(1);
 });
+
+describe('model fallback chain', () => {
+  let g;
+  beforeAll(() => {
+    process.env.GEMINI_FALLBACK_MODELS = 'backup-model';
+    jest.isolateModules(() => {
+      g = require('../src/services/ai/gemini');
+    });
+    process.env.GEMINI_FALLBACK_MODELS = '';
+  });
+  beforeEach(() => g._reset());
+
+  test('a slow primary model hands over to the backup model within the deadline', async () => {
+    mockGenerate.mockImplementation(({ model }) => (model === 'backup-model' ? Promise.resolve({ text: '{"ok":true}' }) : new Promise(() => {})));
+    const t0 = Date.now();
+    expect(await g.generateJson({ system: 's', prompt: 'p', timeoutMs: 4000 })).toEqual({ ok: true });
+    expect(Date.now() - t0).toBeLessThan(4000);
+    expect(mockGenerate.mock.calls.map((c) => c[0].model)).toEqual([expect.any(String), 'backup-model']);
+  });
+
+  test('a quota error moves straight to the backup model without retrying the same one', async () => {
+    mockGenerate.mockImplementation(async ({ model }) => {
+      if (model !== 'backup-model') throw Object.assign(new Error('{"error":{"code":429,"message":"You exceeded your current quota","status":"RESOURCE_EXHAUSTED"}}'), { status: 429 });
+      return { text: '{"ok":true}' };
+    });
+    expect(await g.generateJson({ system: 's', prompt: 'p' })).toEqual({ ok: true });
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+  });
+
+  test('when every model fails, the health status names each model and its error', async () => {
+    mockGenerate.mockImplementation(async ({ model }) => {
+      if (model === 'backup-model') throw Object.assign(new Error('{"error":{"code":429,"message":"You exceeded your current quota","status":"RESOURCE_EXHAUSTED"}}'), { status: 429 });
+      throw Object.assign(new Error('{"error":{"code":503,"message":"The model is overloaded","status":"UNAVAILABLE"}}'), { status: 503 });
+    });
+    const s = await g.status({ deep: true });
+    expect(s.state).toBe('failing');
+    expect(s.lastError.message).toMatch(/All Gemini models failed/);
+    expect(s.lastError.message).toMatch(/overloaded/);
+    expect(s.lastError.message).toMatch(/backup-model: 429 You exceeded your current quota/);
+    expect(s.fallbackModels).toBeDefined();
+  });
+});
+
